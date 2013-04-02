@@ -1,0 +1,46 @@
+{
+  "name": "basic-realtime-multipler",
+  "description": "The best project ever.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/petergledhill/basic-realtime-multipler",
+  "author": {
+    "name": "Peter Gledhill",
+    "email": "petergledhill@gmail.com",
+    "url": "www.peteg.eu"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/petergledhill/basic-realtime-multipler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/petergledhill/basic-realtime-multipler/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/petergledhill/basic-realtime-multipler/blob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "lib/basic-realtime-multipler",
+  "engines": {
+    "node": ">= 0.6.0"
+  },
+  "scripts": {
+    "test": "grunt nodeunit"
+  },
+  "dependencies": {
+    "express": ">= 3.1.0",
+    "socket.io": "0.9.x",
+    "node-uuid": "1.4.0",
+    "requirejs": "~2.0",
+    "amdefine": ">=0.0.2"    
+  },
+  "devDependencies": {
+    "grunt-contrib-concat": "~0.1.2",
+    "grunt-contrib-uglify": "~0.1.1",
+    "grunt-contrib-jshint": "~0.1.1",
+    "grunt-contrib-watch": "~0.2.0",
+    "grunt": "~0.4.0"
+  },
+  "keywords": []
+}
