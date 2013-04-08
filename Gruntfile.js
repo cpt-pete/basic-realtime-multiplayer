@@ -18,7 +18,7 @@ module.exports = function(grunt) {
         stripBanners: true
       },
       dist: {
-        src: ['lib/<%= pkg.name %>.js'],
+        src: ['src/<%= pkg.name %>.js'],
         dest: 'dist/<%= pkg.name %>.js'
       },
     },
@@ -40,9 +40,9 @@ module.exports = function(grunt) {
       },
       lib: {
         options: {
-          jshintrc: 'lib/.jshintrc'
+          jshintrc: 'src/.jshintrc'
         },
-        src: ['lib/**/*.js']
+        src: ['src/**/*.js']
       },
       test: {
         src: ['test/**/*.js']
@@ -61,7 +61,16 @@ module.exports = function(grunt) {
         files: '<%= jshint.test.src %>',
         tasks: ['jshint:test']
       },
-    }
+    },
+    requirejs: {
+      compile: {
+        options: {
+          baseUrl: "src/",
+          name:"client",
+          out: "dist/basic-realtime-multiplayer-client.min.js"
+        }
+      }
+  }
   });
 
   // These plugins provide necessary tasks.
@@ -69,7 +78,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
-  grunt.loadNpmTasks('grunt-contrib-requirejs');
+  grunt.loadNpmTasks('grunt-requirejs');
 
   // Default task.
   grunt.registerTask('default', ['jshint', 'concat', 'uglify']);
