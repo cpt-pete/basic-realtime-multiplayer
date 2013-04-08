@@ -1,4 +1,4 @@
- /*global io: true */
+ /*global define, document, io: true */
 
 define(
   ["./client/game-client"], 
@@ -6,6 +6,7 @@ define(
 
   'use strict';
 
-   var client = new GameClient(io);
+  var viewport = document.getElementById('viewport');
+  new GameClient(io, viewport);
     
 });
