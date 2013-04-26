@@ -15,10 +15,6 @@ define(function () {
   Pool.prototype = {
 
     add : function(item, id){
-      if(!id){
-        throw "pool requires an id";
-      }
-
       this.items[id] = item;
     },
 

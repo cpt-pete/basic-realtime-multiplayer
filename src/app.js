@@ -27,7 +27,6 @@ define(
 
   io.sockets.on('connection', function(socket){
     socket.clientid = UUID();
-
  
     lobby.find_game(socket);    
   });

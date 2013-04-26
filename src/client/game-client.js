@@ -1,17 +1,15 @@
 /*global 
     define, 
-    THREEx,
     require: true 
 */
 
-define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer"],
-  function (GameState, Renderer, DeltaTimer) {
+define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer", "./mixins/input-funcs"],
+  function (GameState, Renderer, DeltaTimer, input_functions) {
 
     'use strict';
     
     function GameClient(io, viewportEl){      
-      this.viewportEl = viewportEl;
-      this.keyboard = new THREEx.KeyboardState();  
+      this.viewportEl = viewportEl; 
 
       this.connect(io);  
     }    
@@ -20,77 +18,58 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer"]
 
       start_game: function(me, others){
         
+        this.local_time = 0;
         this.state = new GameState();
         this.renderer = new Renderer(this.state, this.viewportEl);
 
-        this.me = this.state.add_player(me);
+        this.state.add_players(me);
+        this.state.add_players(others);
 
-        for(var i = 0; i < others.length; i++){
-          this.state.add_player(others[i]);          
-        }             
+        this.me = this.state.find_player(me.id);
+        this.input_seq = 0;
+          
+        new DeltaTimer(4, this.update_time.bind(this));
 
+        this.update(new Date().getTime());
+      },  
+
+      update_time: function(delta){
+        this.local_time += delta;
       },
 
-      on_user_input: function(){      
-
-          var x_dir = 0;
-          var y_dir = 0;
-          var input = [];
-          this.client_has_input = false;
-
-          if( this.keyboard.pressed('A') ||
-              this.keyboard.pressed('left')) {
-
-                  x_dir = -1;
-                  input.push('l');
-
-              } 
-
-          if( this.keyboard.pressed('D') ||
-              this.keyboard.pressed('right')) {
-
-                  x_dir = 1;
-                  input.push('r');
-
-              } 
-
-          if( this.keyboard.pressed('S') ||
-              this.keyboard.pressed('down')) {
-
-                  y_dir = 1;
-                  input.push('d');
-
-              } 
-
-          if( this.keyboard.pressed('W') ||
-              this.keyboard.pressed('up')) {
-
-                  y_dir = -1;
-                  input.push('u');
-
-              } 
-
-          if(input.length) {
-               
-              this.input_seq += 1;
-
-
-              this.me.inputs.push({
-                  inputs : input,
-                  time : this.local_time.fixed(3),
-                  seq : this.input_seq
-              });
-                  
-              var server_packet = 'i.';
-                  server_packet += input.join('-') + '.';
-                  server_packet += this.local_time.toFixed(3).replace('.','-') + '.';
-                  server_packet += this.input_seq;
-                  //Go
-              this.socket.send(  server_packet  );      
+      update: function(t){
         
-          }
+        var inputs = this.sample_inputs();
+        if(inputs.length){
+          this.send_inputs(inputs);
+        }
+        
+        window.requestAnimationFrame( this.update.bind(this), this.viewportEl );
       },
-     
+
+      send_inputs: function(inputs){
+          
+        //Update what sequence we are on now
+        this.input_seq += 1;
+
+        var time = this.local_time.toFixed(3);
+
+        this.state.store_input(this.me.id, inputs, time, this.input_seq);
+       
+        //Send the packet of information to the server.
+        //The input packets are labelled with an 'i' in front.
+        var server_packet = 'i.';
+        server_packet += inputs.join('-') + '.';
+        server_packet += time.replace('.','-') + '.';
+        server_packet += this.input_seq;
+        //Go
+        this.socket.send(  server_packet  );  
+         
+      },
+
+      update_physics: function(){
+
+      },
 
       on_netmessage : function(data) {
        
@@ -117,10 +96,6 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer"]
         this.state.remove_player(player);        
       },
 
-      update : function() {
-      
-      },
-      
       connect : function (io) {
           
         //Store a local reference to our connection to the server
@@ -148,6 +123,11 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer"]
 
   };
 
+  input_functions.call(GameClient.prototype);
+
+//console.log(GameClient.prototype);
+  //console.log(_.extend(GameClient.prototype.sample_inputs, input_functions.sample_inputs));
+//console.log(GameClient.prototype);
   return GameClient;
     
 });
