@@ -6,50 +6,63 @@ if (typeof define !== 'function') {
 }
 
 define(
-  ['./../core/game-state'], 
-  function ( GameState) {
+  ['./../core/game-state', './../core/vector-functions', './../core/point', './../core/delta-timer'], 
+  function ( GameState, vector_utils, Point, DeltaTimer) {
 
   'use strict'; 
 
  
-  function GameServer(io){        
+  function GameServer(io, id){        
     this.state = new GameState();
     this.max_players = 3;
-    this.id = null;
+    this.id = id;
     this.io = io;
   }
 
   GameServer.prototype = {
 
+    start: function(){
+      this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
+    },
+
     add_player : function(socket){ 
 
-      this.state.add_players({
+      this.state.add_players([{
         id:socket.clientid, 
         pos:{
           x:Math.random() * this.state.w,
           y:Math.random() * this.state.h
         }
-      });
+      }]);
 
       var player = this.state.find_player(socket.clientid);
 
-      this._join_room(socket, player);
-
-      //game.player_client.send('s.r.'+ String(game.gamecore.local_time).replace('.','-'));
-
+      this._join_room(socket, player);      
+      this._broadcast_state(socket, player);      
+      this._broadcast_player_joined(socket, player);
     },  
 
-    on_player_disconnected : function(clientid){
+    update_physics : function() {
 
-      var player = this.state.find_player(clientid);
+      var players = this.state.players.all();
 
-      this.state.remove_player(player.id);
-      
-      this.io.sockets.in(this.id).emit('player-left', { playerid: player.id } );  
-      
+      for (var playerId in players) {        
+
+        var player = players[playerId];
+
+        if(player.input_store.inputs.length === 0) continue;
+
+        var new_dir = this.state.calculate_direction_vector(player.input_store.inputs);
+        var resulting_vector = this.state.physics_movement_vector_from_direction(new_dir.x_dir, new_dir.y_dir);
+
+        player.pos = vector_utils.v_add(player.pos, resulting_vector);
+        console.log(player.pos, resulting_vector, new_dir);
+        player.input_store.clear();
+      }
     },
+    
 
-    onMessage : function(client,message) {
+    _on_message : function(client,message) {
 
           //Cut the message up into sub components
       var message_parts = message.split('.');
@@ -58,14 +71,14 @@ define(
 
       if(message_type === 'i') {
               //Input handler will forward this
-        this.onInput(client, message_parts);
+        this._on_input(client, message_parts);
       } else if(message_type === 'p') {
         client.send('s.p.' + message_parts[1]);
       } 
 
     },
 
-    onInput : function(client, parts) {
+    _on_input : function(client, parts) {
       //The input commands come in like u-l,
       //so we split them up into separate commands,
       //and then update the players
@@ -73,34 +86,46 @@ define(
       var input_time = parts[2].replace('-','.');
       var input_seq = parts[3];
 
-      this.store_input(client.id, input_commands, input_time, input_seq);
+      this.state.store_input(client.clientid, input_commands, input_time, input_seq);
     },
 
+    _on_player_disconnected : function(clientid){
+
+      var player = this.state.find_player(clientid);
+
+      this.state.remove_player(player.id);
+      
+      this.io.sockets.in(this.id).emit('player-left', { playerid: player.id } );  
+      
+    },    
+    
     _join_room: function(socket, player){
       
       socket.join(this.id);   
 
       socket.on("disconnect", function(){        
-        this.on_player_disconnected(socket.clientid);
+        this._on_player_disconnected(socket.clientid);
       }.bind(this));
 
-      this._send_initial_state(socket, player);      
-      this._inform_players_of_new_player(socket, player);
+      socket.on("message", function(m){
+        this._on_message(socket, m);
+      }.bind(this));
+
     },
 
-    _send_initial_state: function(socket, player){
+    _broadcast_state: function(socket, player){
       var others = this.state.players.to_array()
         .filter(
           function(p){ return (p.id !== player.id); }
         )
         .map(
-          function(p){ return p.properties(); }
+          function(p){ return p.toObject(); }
         );
-      socket.emit('entered-game', {room_id:this.id, me:player.properties(), others: others});  
+      socket.emit('entered-game', {room_id:this.id, me:player.toObject(), others: others});  
     },
 
-    _inform_players_of_new_player: function(socket, player){
-      socket.broadcast.to(this.id).emit('player-joined', { player: player.properties() } );  
+    _broadcast_player_joined: function(socket, player){
+      socket.broadcast.to(this.id).emit('player-joined', { player: player.toObject() } );  
     }
 
     

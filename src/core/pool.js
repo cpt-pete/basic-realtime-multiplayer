@@ -1,4 +1,4 @@
-/*jshint node:true */
+
 /*global define: true */
 
 if (typeof define !== 'function') {

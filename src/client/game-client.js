@@ -22,7 +22,7 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
         this.state = new GameState();
         this.renderer = new Renderer(this.state, this.viewportEl);
 
-        this.state.add_players(me);
+        this.state.add_players([me]);
         this.state.add_players(others);
 
         this.me = this.state.find_player(me.id);
@@ -40,6 +40,7 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
       update: function(t){
         
         var inputs = this.sample_inputs();
+        
         if(inputs.length){
           this.send_inputs(inputs);
         }
@@ -88,7 +89,7 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
       },
 
       on_player_joined : function(data){
-        this.state.add_player(data.player);                 
+        this.state.add_players([data.player]);                 
       },
 
       on_player_left : function(data){

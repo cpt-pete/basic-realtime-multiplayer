@@ -37,27 +37,6 @@ define(
         } 
 
         return input;
-
-
-          /*if(input.length) {
-               
-              this.input_seq += 1;
-
-
-              this.me.inputs.push({
-                  inputs : input,
-                  time : this.local_time.fixed(3),
-                  seq : this.input_seq
-              });
-                  
-              var server_packet = 'i.';
-                  server_packet += input.join('-') + '.';
-                  server_packet += this.local_time.toFixed(3).replace('.','-') + '.';
-                  server_packet += this.input_seq;
-                  //Go
-              this.socket.send(  server_packet  );      
-        
-          }*/
       };     
   };    
 });

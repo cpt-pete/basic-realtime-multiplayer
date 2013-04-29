@@ -1,24 +1,27 @@
+
+/*global define: true */
+
 if (typeof define !== 'function') {
     var define = require('amdefine')(module);
 }
 
-define(function() {
+define(
+["./input-store", "./point"],
+function(InputStore, Point) {
   'use strict';  
 
-  function Player(playerid) {
-    this.id = playerid;
-    this.pos = {x:0, y:0};
-    this.inputs = [];
-    this.last_input_time = null;
-    this.last_input_seq = null;
+  function Player(data) { 
+    this.id = data.id; 
+    this.pos = new Point(data.pos.x, data.pos.y);
+    this.input_store = new InputStore();
   }  
 
-  Player.prototype.properties = function(){
+  Player.prototype.toObject = function() {
     return { 
       id : this.id, 
-      pos : this.pos 
-    }
-  }
+      pos : this.pos.toObject() 
+    };
+  };  
 
   return Player;
  

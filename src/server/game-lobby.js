@@ -22,16 +22,16 @@ define(
       var game = this.find_server_with_capacity();
       
       if(game === null){
-        game = this.create_game();
+        game = this.create_game();        
         this.games.add(game, game.id);
+        game.start();
       }
 
       game.add_player(socket);        
     },
 
     create_game : function(){
-      var game = new GameServer(this.io);
-      game.id = UUID();      
+      var game = new GameServer(this.io, UUID());   
       return game;
     },
 
