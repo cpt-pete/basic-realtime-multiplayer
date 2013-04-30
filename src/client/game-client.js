@@ -11,6 +11,8 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
     function GameClient(io, viewportEl){      
       this.viewportEl = viewportEl; 
       this.updateid = 0;
+      this.net_offset = 100;
+      this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.
 
       this.connect(io);  
     }    
@@ -74,6 +76,34 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
          
       },
 
+      update_time_from_server = function(server_time){
+        this.client_time = server_time - (this.net_offset/1000);
+        console.log(this.client_time);
+      },
+
+      record_server_update: function(server_update){        
+
+            //One approach is to set the position directly as the server tells you.
+            //This is a common mistake and causes somewhat playable results on a local LAN, for example,
+            //but causes terrible lag when any ping/latency is introduced. The player can not deduce any
+            //information to interpolate with so it misses positions, and packet loss destroys this approach
+            //even more so. See 'the bouncing ball problem' on Wikipedia.
+
+    
+
+            //Cache the data from the server,
+            //and then play the timeline
+            //back to the player with a small delay (net_offset), allowing
+            //interpolation between the points.
+        this.server_updates.push(server_update);
+
+            //we limit the buffer in seconds worth of updates
+            //60fps*buffer seconds = number of samples
+        if(this.server_updates.length >= ( 60*this.buffer_size )) {
+            this.server_updates.splice(0,1);
+        } 
+      },
+
       update_physics: function(){
 
       },
@@ -87,7 +117,8 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
       },
      
       on_serverupdate_recieved : function(data){
-        console.log(data);
+        this.update_time_from_server(data.t);
+        this.record_server_update(data);      
       },
 
       on_entered_game : function(data){   
