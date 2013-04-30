@@ -9,61 +9,29 @@ define(function () {
   'use strict'; 
 
   function Pool(){   
-    this.items = {};
+    this.oItems = {};
+    this.aItems = [];
   }
 
   Pool.prototype = {
 
     add : function(item, id){
-      this.items[id] = item;
+      this.oItems[id] = item;
+      this.aItems.push(item);
     },
 
-    remove : function(id){      
-      delete this.items[id];
+    remove : function(id){    
+      var item = this.find_by_id(id);
+      this.aItems.splce(this.aItems.indexOf(item), 1);
+      delete this.oItems[id];
     },
 
     find_by_id : function(id){
-      return this.items[id] ? this.items[id] : null;      
+      return this.oItems[id] ? this.oItems[id] : null;      
     },
 
-    all : function(){
-      return this.items;
-    },
-
-    to_array: function(){
-      var key, ids = [];
-
-      for (key in this.items) {
-          if (this.items.hasOwnProperty(key)) {
-              ids.push(this.items[key]);
-          }
-      }
-
-      return ids;
-    },
-
-    list_ids : function(){
-      var key, ids = [];
-
-      for (key in this.items) {
-          if (this.items.hasOwnProperty(key)) {
-              ids.push(key);
-          }
-      }
-
-      return ids;
-    },
-
-    count : function(){
-      var key, count = 0;
-
-      for (key in this.items) {
-          if (this.items.hasOwnProperty(key)) {
-              count++;
-          }
-      }
-
-      return count;
+    as_array : function(){
+      return this.aItems;
     }
   };
 

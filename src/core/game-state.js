@@ -6,7 +6,7 @@ if (typeof define !== 'function') {
 
 define(["./../core/player", './../core/pool', './../core/math-functions'], 
 
-function(Player, Pool, math_functions) {
+function(Player, Pool, math) {
   'use strict';  
   
   function GameState() {
@@ -48,49 +48,71 @@ function(Player, Pool, math_functions) {
 
         //Must be fixed step, at physics sync speed.
         return {
-            x : math_functions.toFixed(x * (this.playerspeed * 0.015), 3),
-            y : math_functions.toFixed(y * (this.playerspeed * 0.015), 3)
+            x : math.toFixed(x * (this.playerspeed * 0.015), 3),
+            y : math.toFixed(y * (this.playerspeed * 0.015), 3)
         };
 
     },
 
+    constrain_to_world : function( item ) {
+
+            //Left wall.
+        if(item.pos.x <= 0) {
+            item.pos.x = 0;
+        }
+
+            //Right wall
+        if(item.pos.x >= this.w ) {
+            item.pos.x = this.w;
+        }
+        
+            //Roof wall.
+        if(item.pos.y <= 0) {
+            item.pos.y = 0;
+        }
+
+            //Floor wall
+        if(item.pos.y >= this.h ) {
+            item.pos.y = this.h;
+        }
+
+            //Fixed point helps be more deterministic
+        item.pos.x = math.toFixed(item.pos.x, 4);
+        item.pos.y = math.toFixed(item.pos.y, 4);
+        
+    },
 
     calculate_direction_vector : function( inputs ) {
-
-        //It's possible to have recieved multiple inputs by now,
-        //so we process each one
+       
         var x_dir = 0;
         var y_dir = 0;
         var ic = inputs.length;
-        if(ic) {
-          console.log(ic);
-            for(var j = 0; j < ic; ++j) {
-               
-                var input = inputs[j].inputs;
-                var c = input.length;
-                for(var i = 0; i < c; ++i) {
-                    var key = input[i];
-                    if(key == 'l') {
-                        x_dir -= 1;
-                    }
-                    if(key == 'r') {
-                        x_dir += 1;
-                    }
-                    if(key == 'd') {
-                        y_dir += 1;
-                    }
-                    if(key == 'u') {
-                        y_dir -= 1;
-                    }
-                } //for all input values
 
-            } //for each input command
-        } //if we have inputs
+        for(var j = 0; j < ic; ++j) {
+           
+            var input = inputs[j].inputs;
+            var c = input.length;
 
+            for(var i = 0; i < c; ++i) {
+                var key = input[i];
+                if(key === 'l') {
+                    x_dir -= 1;
+                }
+                if(key === 'r') {
+                    x_dir += 1;
+                }
+                if(key === 'd') {
+                    y_dir += 1;
+                }
+                if(key === 'u') {
+                    y_dir -= 1;
+                }
+            } 
+
+        } 
+        
         return {x_dir: x_dir, y_dir:y_dir};       
     }
-
-    
   };
 
   return GameState;

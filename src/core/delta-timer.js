@@ -13,18 +13,21 @@ define(function() {
     this.delta = new Date().getTime();
     this.lastCall = new Date().getTime();
     this.intervalId = null;
+    this.time = 0;
     this.start();
   }
 
   var proto = DeltaTimer.prototype;
 
   proto.start = function () {
-  
+    if(this.intervalId) this.stop();
+
     this.intervalId = setInterval(function(){
       var now = new Date().getTime();
       this.delta = (now - this.lastCall) / 1000.0;
       this.lastCall = now;
-      this.callback.call(this, this.delta);
+      this.time += this.delta;
+      this.callback.call(this, this.delta, this.time);
     }.bind(this), this.rate);
 
   };

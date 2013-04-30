@@ -8,7 +8,7 @@ define(function() {
   function InputStore() {
     this.inputs = [];
     //this.last_input_time = null;
-   // this.last_input_seq = null;
+    this.last_input_seq = null;
   }  
 
   var proto = InputStore.prototype;

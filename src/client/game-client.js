@@ -10,6 +10,7 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
     
     function GameClient(io, viewportEl){      
       this.viewportEl = viewportEl; 
+      this.updateid = 0;
 
       this.connect(io);  
     }    
@@ -28,15 +29,20 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
         this.me = this.state.find_player(me.id);
         this.input_seq = 0;
           
-        new DeltaTimer(4, this.update_time.bind(this));
-
-        this.update(new Date().getTime());
+        new DeltaTimer(4, function(delta, time){
+          this.local_time = time;
+        });
+        
       },  
 
-      update_time: function(delta){
-        this.local_time += delta;
+      start: function(){
+        this.update(new Date().getTime());
       },
 
+      stop: function(){
+        window.cancelAnimationFrame(this.updateid);
+      },
+     
       update: function(t){
         
         var inputs = this.sample_inputs();
@@ -45,7 +51,7 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
           this.send_inputs(inputs);
         }
         
-        window.requestAnimationFrame( this.update.bind(this), this.viewportEl );
+        this.updateid = window.requestAnimationFrame( this.update.bind(this), this.viewportEl );
       },
 
       send_inputs: function(inputs){
@@ -80,8 +86,8 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
 
       },
      
-      on_serverupdate_recieved : function(){
-
+      on_serverupdate_recieved : function(data){
+        console.log(data);
       },
 
       on_entered_game : function(data){   
@@ -108,6 +114,8 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
 
         socket.on('player-left', this.on_player_left.bind(this));
 
+        socket.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
+
 
        /* //Sent when we are disconnected (network, server down, etc)
         this.socket.on('disconnect', this.on_disconnect.bind(this) );
@@ -126,9 +134,6 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
 
   input_functions.call(GameClient.prototype);
 
-//console.log(GameClient.prototype);
-  //console.log(_.extend(GameClient.prototype.sample_inputs, input_functions.sample_inputs));
-//console.log(GameClient.prototype);
   return GameClient;
     
 });

@@ -11,7 +11,6 @@ define(
 
   'use strict'; 
 
- 
   function GameServer(io, id){        
     this.state = new GameState();
     this.max_players = 3;
@@ -23,6 +22,12 @@ define(
 
     start: function(){
       this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
+      this.update_loop = new DeltaTimer(45, this.update.bind(this));
+    },
+
+    stop: function(){
+      this.physics_loop.stop();
+      this.update_loop.stop();
     },
 
     add_player : function(socket){ 
@@ -38,29 +43,56 @@ define(
       var player = this.state.find_player(socket.clientid);
 
       this._join_room(socket, player);      
-      this._broadcast_state(socket, player);      
+      this._broadcast_initial_state(socket, player);      
       this._broadcast_player_joined(socket, player);
     },  
 
     update_physics : function() {
 
-      var players = this.state.players.all();
+      var players = this.state.players.as_array();
+      var count = players.length;
 
-      for (var playerId in players) {        
+      for (var i = 0; i < count; i++) {        
 
-        var player = players[playerId];
+        var player = players[i];
 
-        if(player.input_store.inputs.length === 0) continue;
+        if(player.input_store.inputs.length === 0){
+          continue;
+        }
 
         var new_dir = this.state.calculate_direction_vector(player.input_store.inputs);
         var resulting_vector = this.state.physics_movement_vector_from_direction(new_dir.x_dir, new_dir.y_dir);
 
         player.pos = vector_utils.v_add(player.pos, resulting_vector);
-        console.log(player.pos, resulting_vector, new_dir);
+
+        this.state.constrain_to_world(player);
+
+        console.log(player.pos);
+
         player.input_store.clear();
       }
     },
-    
+
+    update : function(delta, time){
+
+      var players = this.state.players.as_array();
+
+      var state = players.map(function(p){
+        return {
+          id: p.id,
+          pos: p.pos,
+          is: p.input_store.last_input_seq
+        };
+      });
+      
+      var update = {
+        s: state,
+        t: time
+      };
+
+      this.io.sockets.in(this.id).emit('onserverupdate', update);
+
+    },    
 
     _on_message : function(client,message) {
 
@@ -113,8 +145,8 @@ define(
 
     },
 
-    _broadcast_state: function(socket, player){
-      var others = this.state.players.to_array()
+    _broadcast_initial_state: function(socket, player){
+      var others = this.state.players.as_array()
         .filter(
           function(p){ return (p.id !== player.id); }
         )
@@ -128,7 +160,6 @@ define(
       socket.broadcast.to(this.id).emit('player-joined', { player: player.toObject() } );  
     }
 
-    
   };
 
   return GameServer;

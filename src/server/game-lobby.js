@@ -36,15 +36,15 @@ define(
     },
 
     find_server_with_capacity : function(){
-      var gameId, games = this.games.all();
+      var i, gameId, games = this.games.as_array();
       var match = null;
+      var count = games.length;
 
-      for(gameId in games){
-        var game = games[gameId];
-
-        if(games.hasOwnProperty(gameId) === false){ continue; }
-     
-        if(game.state.players.count() < game.max_players){
+      for(i = 0; i < count; i++){
+      
+        var game = games[i];
+       
+        if(game.state.players.as_array().length < game.max_players){
           match = game;
           break;
         }
