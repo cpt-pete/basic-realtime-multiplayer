@@ -3,13 +3,14 @@
     require: true 
 */
 
-define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions"],
-  function (GameState, Renderer, DeltaTimer, input_functions, math, vector_functions) {
+define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions"],
+  function ( DeltaTimer, input_functions, math, vector_functions) {
 
     'use strict';
     
-    function GameClient(io, viewportEl){      
-      this.viewportEl = viewportEl; 
+    function GameClient(io, state, renderer){     
+      this.state = state; 
+      this.renderer = renderer;
       this.updateid = 0;
       this.net_offset = 100;
       this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.      
@@ -27,8 +28,6 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
       start: function(me, others){
         
         this.local_time = 0;
-        this.state = new GameState();
-        this.renderer = new Renderer(this.state, this.viewportEl);
 
         this.state.add_players([me]);
         this.state.add_players(others);
@@ -59,6 +58,8 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
         }
 
         this.process_net_updates();
+
+        this.renderer.update();
         
         this.updateid = window.requestAnimationFrame( this.update.bind(this), this.viewportEl );
       },
@@ -212,6 +213,11 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
                 }*/
 
                 var player_latest = latest_server_data.s[playerid];
+
+                if(!target.s[playerid] || !previous.s[playerid]){
+                  continue;
+                }
+
                 var player_target = target.s[playerid];
                 var player_previous = previous.s[playerid];
 

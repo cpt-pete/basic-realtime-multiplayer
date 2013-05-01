@@ -63,7 +63,9 @@ define(
         var new_dir = this.state.calculate_direction_vector(player.input_store.inputs);
         var resulting_vector = this.state.physics_movement_vector_from_direction(new_dir.x_dir, new_dir.y_dir);
 
-        player.pos = vector_utils.v_add(player.pos, resulting_vector);
+        var pos = vector_utils.v_add(player.pos, resulting_vector);
+        player.pos.x = pos.x;
+        player.pos.y = pos.y;
 
         player.input_store.processed_input_seq = player.input_store.get_latest_input_sequence();
 
@@ -152,6 +154,7 @@ define(
     },
 
     _broadcast_initial_state: function(socket, player){
+
       var others = this.state.players.as_array()
         .filter(
           function(p){ return (p.id !== player.id); }
@@ -163,7 +166,7 @@ define(
     },
 
     _broadcast_player_joined: function(socket, player){
-      console.log(player);
+      console.log(player.pos.constructor);
       socket.broadcast.to(this.id).emit('player-joined', { player: player.toObject() } );  
     }
 
