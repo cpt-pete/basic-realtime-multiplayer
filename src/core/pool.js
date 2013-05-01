@@ -22,7 +22,7 @@ define(function () {
 
     remove : function(id){    
       var item = this.find_by_id(id);
-      this.aItems.splce(this.aItems.indexOf(item), 1);
+      this.aItems.splice(this.aItems.indexOf(item), 1);
       delete this.oItems[id];
     },
 

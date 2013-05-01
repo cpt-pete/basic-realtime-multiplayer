@@ -65,6 +65,8 @@ define(
 
         player.pos = vector_utils.v_add(player.pos, resulting_vector);
 
+        player.input_store.processed_input_seq = player.input_store.get_latest_input_sequence();
+
         this.state.constrain_to_world(player);
 
         console.log(player.pos);
@@ -77,14 +79,18 @@ define(
 
       var players = this.state.players.as_array();
 
-      var state = players.map(function(p){
-        return {
-          id: p.id,
-          pos: p.pos,
-          is: p.input_store.last_input_seq
+      var state = {};
+      var count = players.length;
+
+      for(var i = 0; i < count; i++){
+        var player = players[i];
+
+        state[player.id] = { 
+          pos: player.pos,
+          is: player.input_store.processed_input_seq
         };
-      });
-      
+      }
+          
       var update = {
         s: state,
         t: time
@@ -116,7 +122,7 @@ define(
       //and then update the players
       var input_commands = parts[1].split('-');
       var input_time = parts[2].replace('-','.');
-      var input_seq = parts[3];
+      var input_seq = parseInt(parts[3], 10);
 
       this.state.store_input(client.clientid, input_commands, input_time, input_seq);
     },
@@ -157,6 +163,7 @@ define(
     },
 
     _broadcast_player_joined: function(socket, player){
+      console.log(player);
       socket.broadcast.to(this.id).emit('player-joined', { player: player.toObject() } );  
     }
 

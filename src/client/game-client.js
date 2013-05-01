@@ -3,8 +3,8 @@
     require: true 
 */
 
-define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer", "./mixins/input-funcs"],
-  function (GameState, Renderer, DeltaTimer, input_functions) {
+define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions"],
+  function (GameState, Renderer, DeltaTimer, input_functions, math, vector_functions) {
 
     'use strict';
     
@@ -12,14 +12,19 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
       this.viewportEl = viewportEl; 
       this.updateid = 0;
       this.net_offset = 100;
-      this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.
+      this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.      
+      this.client_smoothing = true;       //Whether or not the client side prediction tries to smooth things out
+      this.client_smooth = 25;            //amount of smoothing to apply to client update dest
+
+      this.server_updates = [];
+      this.input_seq = 0;
 
       this.connect(io);  
     }    
 
     GameClient.prototype = {
 
-      start_game: function(me, others){
+      start: function(me, others){
         
         this.local_time = 0;
         this.state = new GameState();
@@ -29,19 +34,19 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
         this.state.add_players(others);
 
         this.me = this.state.find_player(me.id);
-        this.input_seq = 0;
           
         new DeltaTimer(4, function(delta, time){
           this.local_time = time;
-        });
+        }.bind(this));
+
+        this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
+
+        this.update(new Date().getTime());
         
       },  
-
-      start: function(){
-        this.update(new Date().getTime());
-      },
-
+     
       stop: function(){
+        this.physics_loop.stop();
         window.cancelAnimationFrame(this.updateid);
       },
      
@@ -52,8 +57,47 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
         if(inputs.length){
           this.send_inputs(inputs);
         }
+
+        this.process_net_updates();
         
         this.updateid = window.requestAnimationFrame( this.update.bind(this), this.viewportEl );
+      },
+
+      client_process_net_prediction_correction : function() {
+
+        if(!this.server_updates.length){ 
+          return;
+        }
+
+        var latest_server_data = this.server_updates[this.server_updates.length-1];
+        var my_server_pos = latest_server_data.s[this.me.id].pos;
+        var my_last_input_seq_on_server = latest_server_data.s[this.me.id].is;
+        var input_store = this.me.input_store;
+       
+        if(my_last_input_seq_on_server !== input_store.processed_input_seq) {
+          
+          var lastinputseq_index = input_store.get_index_from_sequence(my_last_input_seq_on_server);
+
+          console.log(input_store.inputs, my_last_input_seq_on_server, lastinputseq_index);
+
+          if(lastinputseq_index !== -1) {
+
+            input_store.clear_upto_and_including(lastinputseq_index);                  
+            input_store.processed_input_seq = my_last_input_seq_on_server;
+
+            this.me.pos.x = my_server_pos.x;
+            this.me.pos.y = my_server_pos.y;
+         
+          console.log(this.me.pos);
+          //  this.client_update_physics();
+          //  this.client_update_local_position();
+
+          } 
+        } 
+      },
+
+      update_physics: function(){
+
       },
 
       send_inputs: function(inputs){
@@ -76,25 +120,12 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
          
       },
 
-      update_time_from_server = function(server_time){
-        this.client_time = server_time - (this.net_offset/1000);
-        console.log(this.client_time);
+      update_time_from_server : function(server_time){
+        this.client_time = server_time - (this.net_offset/1000);        
       },
 
       record_server_update: function(server_update){        
 
-            //One approach is to set the position directly as the server tells you.
-            //This is a common mistake and causes somewhat playable results on a local LAN, for example,
-            //but causes terrible lag when any ping/latency is introduced. The player can not deduce any
-            //information to interpolate with so it misses positions, and packet loss destroys this approach
-            //even more so. See 'the bouncing ball problem' on Wikipedia.
-
-    
-
-            //Cache the data from the server,
-            //and then play the timeline
-            //back to the player with a small delay (net_offset), allowing
-            //interpolation between the points.
         this.server_updates.push(server_update);
 
             //we limit the buffer in seconds worth of updates
@@ -104,10 +135,131 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
         } 
       },
 
-      update_physics: function(){
+      process_net_updates : function() {
 
-      },
+          if(!this.server_updates.length){
+            return;
+          } 
 
+          //First : Find the position in the updates, on the timeline
+          //We call this current_time, then we find the past_pos and the target_pos using this,
+          //searching throught the server_updates array for current_time in between 2 other times.
+          // Then :  other player position = lerp ( past_pos, target_pos, current_time );
+
+              //Find the position in the timeline of updates we stored.
+          var current_time = this.client_time;
+          var count = this.server_updates.length-1;
+          var target = null;
+          var previous = null;
+
+              //We look from the 'oldest' updates, since the newest ones
+              //are at the end (list.length-1 for example). This will be expensive
+              //only when our time is not found on the timeline, since it will run all
+              //samples. Usually this iterates very little before breaking out with a target.
+          for(var i = 0; i < count; ++i) {
+
+              var point = this.server_updates[i];
+              var next_point = this.server_updates[i+1];
+
+                  //Compare our point in time with the server times we have
+              if(current_time > point.t && current_time < next_point.t) {
+                  target = next_point;
+                  previous = point;
+                  break;
+              }
+          }
+
+              //With no target we store the last known
+              //server position and move to that instead
+          if(!target) {
+              target = this.server_updates[0];
+              previous = this.server_updates[0];
+          }
+
+              //Now that we have a target and a previous destination,
+              //We can interpolate between then based on 'how far in between' we are.
+              //This is simple percentage maths, value/target = [0,1] range of numbers.
+              //lerp requires the 0,1 value to lerp to? thats the one.
+
+           if(target && previous) {
+
+              var target_time = target.t;
+
+              var difference = target_time - current_time;
+              var max_difference = math.toFixed(target.t - previous.t, 3);
+              var time_point = math.toFixed(difference/max_difference, 3);
+
+                  //Because we use the same target and previous in extreme cases
+                  //It is possible to get incorrect values due to division by 0 difference
+                  //and such. This is a safe guard and should probably not be here. lol.
+              if( isNaN(time_point) ) {
+                time_point = 0;
+              }
+              if(time_point === -Infinity) {
+                time_point = 0;
+              }
+              if(time_point === Infinity){
+                time_point = 0;
+              } 
+
+                  //The most recent server update
+              var latest_server_data = this.server_updates[ this.server_updates.length-1 ];
+    
+              for(var playerid in latest_server_data.s){
+
+                /*if(this.me.id == playerid){
+                  continue;
+                }*/
+
+                var player_latest = latest_server_data.s[playerid];
+                var player_target = target.s[playerid];
+                var player_previous = previous.s[playerid];
+
+                var server_pos = player_latest.pos;
+                var target_pos = player_target.pos;
+                var past_pos = player_previous.pos;
+
+                var pos_lerp = vector_functions.v_lerp(past_pos, target_pos, time_point);
+
+                var player = this.state.find_player(playerid);
+
+                if(this.client_smoothing) {
+                    player.pos = vector_functions.v_lerp( player.pos, pos_lerp, this.physics_loop.delta * this.client_smooth);
+                } else {
+                    player.pos.x = pos_lerp.x;
+                    player.pos.y = pos_lerp.y;
+                }
+              }
+
+           
+
+                  //Now, if not predicting client movement , we will maintain the local player position
+                  //using the same method, smoothing the players information from the past.
+              /*if(!this.client_predict) {
+
+                      //These are the exact server positions from this tick, but only for the ghost
+                  var my_server_pos = this.players.self.host ? latest_server_data.hp : latest_server_data.cp;
+
+                      //The other players positions in this timeline, behind us and in front of us
+                  var my_target_pos = this.players.self.host ? target.hp : target.cp;
+                  var my_past_pos = this.players.self.host ? previous.hp : previous.cp;
+
+                      //Snap the ghost to the new server position
+                //  this.ghosts.server_pos_self.pos = this.pos(my_server_pos);
+                  var local_target = this.v_lerp(my_past_pos, my_target_pos, time_point);
+
+                      //Smoothly follow the destination position
+                  if(this.client_smoothing) {
+                      this.players.self.pos = this.v_lerp( this.players.self.pos, local_target, this._pdt*this.client_smooth);
+                  } else {
+                      this.players.self.pos = this.pos( local_target );
+                  }
+              }*/
+
+          } //if target && previous
+
+      }, //game_core.client_process_net_updates
+ 
       on_netmessage : function(data) {
        
       },
@@ -119,10 +271,11 @@ define(["./../core/game-state", "./../client/renderer", "./../core/delta-timer",
       on_serverupdate_recieved : function(data){
         this.update_time_from_server(data.t);
         this.record_server_update(data);      
+        this.client_process_net_prediction_correction();
       },
 
       on_entered_game : function(data){   
-        this.start_game(data.me, data.others);         
+        this.start(data.me, data.others);         
       },
 
       on_player_joined : function(data){

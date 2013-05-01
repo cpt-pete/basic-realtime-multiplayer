@@ -8,7 +8,7 @@ define(function() {
   function InputStore() {
     this.inputs = [];
     //this.last_input_time = null;
-    this.last_input_seq = null;
+    this.processed_input_seq = 0;
   }  
 
   var proto = InputStore.prototype;
@@ -17,9 +17,30 @@ define(function() {
     this.inputs = [];
   };
 
-  proto.add = function(inputs, input_time, input_seq){
-    this.inputs.push({inputs:inputs, time:input_time, seq:input_seq});
-    console.log(this.inputs);
+  proto.add = function(inputs, input_time, input_seq){    
+    this.inputs.push({inputs:inputs, time:input_time, seq:input_seq});    
+  };
+
+  proto.get_latest_input_sequence = function(){    
+    return this.inputs.length > 0 ? this.inputs[this.inputs.length - 1].seq : 0;
+  };  
+
+  proto.clear_upto_and_including = function(index){
+    this.inputs.splice(0, index +1);
+  };
+
+  proto.get_index_from_sequence = function(sequence){
+    var count = this.inputs.length,
+        index = -1;    
+
+    for(var i = 0 ; i < count; i++){
+      if(this.inputs[i].seq === sequence){
+        index = i;
+        break;
+      }
+    }
+
+    return index;
   };
 
  /* proto.unprocessed = function(){
