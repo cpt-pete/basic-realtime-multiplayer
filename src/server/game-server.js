@@ -71,8 +71,6 @@ define(
 
         this.state.constrain_to_world(player);
 
-        console.log(player.pos);
-
         player.input_store.clear();
       }
     },
@@ -166,7 +164,6 @@ define(
     },
 
     _broadcast_player_joined: function(socket, player){
-      console.log(player.pos.constructor);
       socket.broadcast.to(this.id).emit('player-joined', { player: player.toObject() } );  
     }
 
