@@ -11,7 +11,7 @@ define(
 
   'use strict';
 
-  var io, server = webserver(5000);
+  var io, server = webserver(process.env.PORT || 5000);
   var lobby;
 
   io = socketio.listen(server);
