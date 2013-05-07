@@ -14,6 +14,7 @@ define(
   function GameLobby(io){   
     this.io = io;
     this.games = new Pool(); 
+    this.total_games = 0;
   }  
 
   GameLobby.prototype = {
@@ -31,7 +32,9 @@ define(
     },
 
     create_game : function(){
-      var game = new GameServer(this.io, UUID());   
+      this.total_games++;
+      var id = this.total_games;
+      var game = new GameServer(this.io, id);   
       return game;
     },
 
@@ -54,43 +57,6 @@ define(
     }
 
   };
-
- 
-
- /* var onMessage = function(client,message) {
-
-    //Cut the message up into sub components
-    var message_parts = message.split('.');
-    //The first is always the type of message
-    var message_type = message_parts[0];
-
-    if(message_type == 'i') {
-        //Input handler will forward this
-      onInput(client, message_parts);
-    } else if(message_type == 'p') {
-      client.send('s.p.' + message_parts[1]);
-    } 
-
-  }; //game_server.onMessage
-
-  var onInput = function(client, parts) {
-    //The input commands come in like u-l,
-    //so we split them up into separate commands,
-    //and then update the players
-    var input_commands = parts[1].split('-');
-    var input_time = parts[2].replace('-','.');
-    var input_seq = parts[3];
-
-    //the client should be in a game, so
-    //we can tell that game to handle the input
-    if(client && client.game && client.game.gamecore) {
-      client.game.gamecore.handle_server_input(client, input_commands, input_time, input_seq);
-    }
-
-  }; //game_server.onInput*/
-
- 
-   
  
   return GameLobby;
 

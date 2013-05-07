@@ -20,7 +20,9 @@ define(function() {
   var proto = DeltaTimer.prototype;
 
   proto.start = function () {
-    if(this.intervalId) this.stop();
+    if(this.intervalId) {
+      this.stop();
+    }
 
     this.intervalId = setInterval(function(){
       var now = new Date().getTime();

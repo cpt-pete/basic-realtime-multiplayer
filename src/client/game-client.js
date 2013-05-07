@@ -14,7 +14,6 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
       this.updateid = 0;
       this.net_offset = 100;
       this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.      
-      this.client_smoothing = true;       //Whether or not the client side prediction tries to smooth things out
       this.client_smooth = 25;            //amount of smoothing to apply to client update dest
 
       this.server_updates = [];
@@ -40,9 +39,6 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
 
         this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
 
-        //var t = new DeltaTimer(1000, this.update.bind(this));
-        //this.physics_loop = new DeltaTimer(1000, this.update_physics.bind(this));
-
         this.update(new Date().getTime());
         
       },  
@@ -61,7 +57,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         }
        
 
-        this.process_net_updates();
+        this.process_server_updates();
 
         this.renderer.update();
         
@@ -83,13 +79,11 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
           
           var lastinputseq_index = input_store.get_index_from_sequence(my_last_input_seq_on_server);
 
-          //console.log(input_store.inputs, my_last_input_seq_on_server, lastinputseq_index);
-
           if(lastinputseq_index !== -1) {
 
             var len = input_store.inputs.length;
             input_store.clear_upto_and_including(lastinputseq_index);      
-           // console.log("before " + len, input_store.inputs.length);
+
             input_store.processed_input_seq = my_last_input_seq_on_server;
 
             this.me.cur_state.fromObject(my_server_pos);            
@@ -158,14 +152,13 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
          
       },
 
-      update_time_from_server : function(server_time){
-        this.client_time = server_time - (this.net_offset/1000);        
+      update_time_from_server : function(t){
+        this.server_time = t - (this.net_offset/1000);        
       },
 
       record_server_update: function(server_update){        
 
         this.server_updates.push(server_update);
-
             //we limit the buffer in seconds worth of updates
             //60fps*buffer seconds = number of samples
         if(this.server_updates.length >= ( 60*this.buffer_size )) {
@@ -174,19 +167,19 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         } 
       },
 
-      process_net_updates : function() {
+      process_server_updates : function() {
 
           if(!this.server_updates.length){
             return;
           } 
+
 
           //First : Find the position in the updates, on the timeline
           //We call this current_time, then we find the past_pos and the target_pos using this,
           //searching throught the server_updates array for current_time in between 2 other times.
           // Then :  other player position = lerp ( past_pos, target_pos, current_time );
 
-              //Find the position in the timeline of updates we stored.
-          var current_time = this.client_time;
+              //Find the position in the timeline of updates we stored.  
           var count = this.server_updates.length-1;
           var target = null;
           var previous = null;
@@ -201,7 +194,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
               var next_point = this.server_updates[i+1];
 
                   //Compare our point in time with the server times we have
-              if(current_time > point.t && current_time < next_point.t) {
+              if(this.server_time > point.t && this.server_time < next_point.t) {
                   target = next_point;
                   previous = point;
                   break;
@@ -224,7 +217,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
 
               var target_time = target.t;
 
-              var difference = target_time - current_time;
+              var difference = target_time - this.server_time;
               var max_difference = math.toFixed(target.t - previous.t, 3);
               var time_point = math.toFixed(difference/max_difference, 3);
                   //Because we use the same target and previous in extreme cases
@@ -246,7 +239,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
     
               for(var playerid in latest_server_data.s){
 
-                if(this.me.id === playerid){
+                if(this.me.id === parseInt(playerid, 10)){
                   continue;
                 }
 
@@ -266,48 +259,16 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
                 var player = this.state.find_player(playerid);
 
                 var pos_lerp = vector_utils.v_lerp(past_pos, target_pos, time_point);
-                var pos = vector_utils.v_lerp( player.pos, pos_lerp, this.physics_loop.delta * this.client_smooth );
-
-                
-
-               /* if(pos.x !== player.pos.x || pos.y !== player.pos.y){
-                  console.log(pos.x, pos.y, player.pos.x, player.pos.y);
-                  console.log(player.pos, pos_lerp, pos, this.physics_loop.delta);  
-                }*/
+                var pos = vector_utils.v_lerp( player.pos, pos_lerp, this.physics_loop.delta * this.client_smooth );                
 
                 player.pos.x = pos.x;
                 player.pos.y = pos.y;
             
               }
 
-           
+          }
 
-                  //Now, if not predicting client movement , we will maintain the local player position
-                  //using the same method, smoothing the players information from the past.
-              /*if(!this.client_predict) {
-
-                      //These are the exact server positions from this tick, but only for the ghost
-                  var my_server_pos = this.players.self.host ? latest_server_data.hp : latest_server_data.cp;
-
-                      //The other players positions in this timeline, behind us and in front of us
-                  var my_target_pos = this.players.self.host ? target.hp : target.cp;
-                  var my_past_pos = this.players.self.host ? previous.hp : previous.cp;
-
-                      //Snap the ghost to the new server position
-                //  this.ghosts.server_pos_self.pos = this.pos(my_server_pos);
-                  var local_target = this.v_lerp(my_past_pos, my_target_pos, time_point);
-
-                      //Smoothly follow the destination position
-                  if(this.client_smoothing) {
-                      this.players.self.pos = this.v_lerp( this.players.self.pos, local_target, this._pdt*this.client_smooth);
-                  } else {
-                      this.players.self.pos = this.pos( local_target );
-                  }
-              }*/
-
-          } //if target && previous
-
-      }, //game_core.client_process_net_updates
+      },
  
       on_netmessage : function(data) {
        

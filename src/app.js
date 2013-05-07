@@ -6,13 +6,14 @@ if (typeof define !== 'function') {
 }
 
 define(
-  ['./server/web-server', 'socket.io', "./server/game-lobby", 'node-uuid'], 
-  function (webserver, socketio, GameLobby, UUID) {
+  ['./server/web-server', 'socket.io', "./server/game-lobby"], 
+  function (webserver, socketio, GameLobby) {
 
   'use strict';
 
   var io, server = webserver(process.env.PORT || 5000);
   var lobby;
+  var no_of_connections = 0;
 
   io = socketio.listen(server);
 
@@ -26,8 +27,8 @@ define(
   });
 
   io.sockets.on('connection', function(socket){
-    socket.clientid = UUID();
- 
+    no_of_connections++; 
+    socket.clientid = no_of_connections; 
     lobby.find_game(socket);    
   });
 

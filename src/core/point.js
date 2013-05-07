@@ -26,10 +26,10 @@ function() {
   };
 
   proto.toObject = function() {
-    return Object.create(null, {
-      x: { value: this.x },
-      y: { value: this.y }
-    });
+    return {
+      x: this.x,
+      y: this.y 
+    };
   };
 
   return Point;
