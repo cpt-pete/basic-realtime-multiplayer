@@ -16,7 +16,7 @@ define(
 
   io = socketio.listen(server);
 
-  io.configure(function (){
+  io.configure(function (){ 
 
     io.set('log level', 0);
     io.set('authorization', function (handshakeData, callback) {

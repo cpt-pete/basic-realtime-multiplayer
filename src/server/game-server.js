@@ -21,6 +21,9 @@ define(
   GameServer.prototype = {
 
     start: function(){
+      //this.physics_loop = new DeltaTimer(1000, this.update_physics.bind(this));
+      //this.update_loop = new DeltaTimer(1000, this.update.bind(this));
+
       this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
       this.update_loop = new DeltaTimer(45, this.update.bind(this));
     },
@@ -68,6 +71,8 @@ define(
         player.pos.y = pos.y;
 
         player.input_store.processed_input_seq = player.input_store.get_latest_input_sequence();
+
+//console.log(player.input_store.processed_input_seq, player.input_store.inputs.length);
 
         this.state.constrain_to_world(player);
 

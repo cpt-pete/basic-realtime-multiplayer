@@ -29,6 +29,10 @@ define(function() {
     this.inputs.splice(0, index +1);
   };
 
+  proto.mark_all_processed = function(){
+    this.processed_input_seq = this.get_latest_input_sequence();
+  };
+
   proto.get_index_from_sequence = function(sequence){
     var count = this.inputs.length,
         index = -1;    
@@ -43,19 +47,19 @@ define(function() {
     return index;
   };
 
- /* proto.unprocessed = function(){
+  proto.unprocessed = function(){
     var unprocessed = [];
 
     var l = this.inputs.length;
 
     for(var i = 0; i < l; i++){
-      if(this.inputs[j].seq > this.last_input_seq){
+      if(this.inputs[i].seq > this.processed_input_seq){
         unprocessed.push(this.inputs[i]);  
       }
     }
 
     return unprocessed;    
-  };*/
+  };
 
   return InputStore;
  

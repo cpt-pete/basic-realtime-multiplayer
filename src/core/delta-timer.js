@@ -10,7 +10,7 @@ define(function() {
   function DeltaTimer(rate, callback) {
     this.rate = rate || 100;
     this.callback = callback;
-    this.delta = new Date().getTime();
+    this.delta = 0;
     this.lastCall = new Date().getTime();
     this.intervalId = null;
     this.time = 0;

@@ -13,6 +13,9 @@ function(InputStore, Point) {
   function Player(data) { 
     this.id = data.id; 
     this.pos = new Point(data.pos.x, data.pos.y);
+    this.old_state = this.pos.clone();
+    this.cur_state = this.pos.clone();
+    this.state_time = new Date().getTime();
     this.input_store = new InputStore();
   }  
 

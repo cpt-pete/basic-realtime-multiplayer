@@ -20,6 +20,11 @@ function() {
     return new Point(this.x, this.y);
   };
 
+  proto.fromObject = function(obj){
+    this.x = obj.x;
+    this.y = obj.y;
+  };
+
   proto.toObject = function() {
     return Object.create(null, {
       x: { value: this.x },
