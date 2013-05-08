@@ -19,6 +19,10 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
       this.server_updates = [];
       this.input_seq = 0;
 
+
+      this.server_time = 0;
+      this.client_time = 0;
+
       this.connect(io);  
     }    
 
@@ -40,6 +44,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
 
         this.update(new Date().getTime());
+        this.create_ping_timer();
         
       },  
      
@@ -69,7 +74,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         if(!this.server_updates.length){ 
           return;
         }
-
+        
         var latest_server_data = this.server_updates[this.server_updates.length-1];
         var my_server_pos = latest_server_data.s[this.me.id].pos;
         var my_last_input_seq_on_server = latest_server_data.s[this.me.id].is;
@@ -152,8 +157,21 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
          
       },
 
+      create_ping_timer : function() {
+
+              //Set a ping timer to 1 second, to maintain the ping/latency between
+              //client and server and calculated roughly how our connection is doing
+
+          setInterval(function(){
+              this.last_ping_time = new Date().getTime();
+              this.socket.send('p.' + (this.last_ping_time) );
+          }.bind(this), 1000);
+          
+      },
+
       update_time_from_server : function(t){
-        this.server_time = t - (this.net_offset/1000);        
+        this.server_time = t;
+        this.client_time = t - (this.net_offset/1000);        
       },
 
       record_server_update: function(server_update){        
@@ -194,7 +212,8 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
               var next_point = this.server_updates[i+1];
 
                   //Compare our point in time with the server times we have
-              if(this.server_time > point.t && this.server_time < next_point.t) {
+
+              if(this.client_time > point.t && this.client_time < next_point.t) {
                   target = next_point;
                   previous = point;
                   break;
@@ -204,8 +223,8 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
               //With no target we store the last known
               //server position and move to that instead
           if(!target) {
-              target = this.server_updates[0];
-              previous = this.server_updates[0];
+              target = this.server_updates[this.server_updates.length - 1];
+              previous = target;
           }
 
               //Now that we have a target and a previous destination,
@@ -217,7 +236,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
 
               var target_time = target.t;
 
-              var difference = target_time - this.server_time;
+              var difference = target_time - this.client_time;
               var max_difference = math.toFixed(target.t - previous.t, 3);
               var time_point = math.toFixed(difference/max_difference, 3);
                   //Because we use the same target and previous in extreme cases
@@ -259,7 +278,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
                 var player = this.state.find_player(playerid);
 
                 var pos_lerp = vector_utils.v_lerp(past_pos, target_pos, time_point);
-                var pos = vector_utils.v_lerp( player.pos, pos_lerp, this.physics_loop.delta * this.client_smooth );                
+                var pos = vector_utils.v_lerp( player.pos, pos_lerp, this.physics_loop.delta * this.client_smooth );                       
 
                 player.pos.x = pos.x;
                 player.pos.y = pos.y;
@@ -269,9 +288,32 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
           }
 
       },
+
+      on_ping: function(data){
+        this.net_ping = new Date().getTime() - parseFloat( data );
+        this.net_latency = this.net_ping/2;
+      },
  
       on_netmessage : function(data) {
        
+          var commands = data.split('.');
+          var command = commands[0];
+          var subcommand = commands[1] || null;
+          var commanddata = commands[2] || null;
+
+          switch(command) {
+              case 's': //server message
+
+                  switch(subcommand) {
+                    
+                      case 'p' : //server ping
+                          this.on_ping(commanddata); break;
+                     
+                  } 
+
+              break; 
+          }
+
       },
 
       on_disconnect : function(){
@@ -309,6 +351,8 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         socket.on('player-left', this.on_player_left.bind(this));
 
         socket.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
+
+        socket.on('message', this.on_netmessage.bind(this));
 
 
        /* //Sent when we are disconnected (network, server down, etc)

@@ -6,8 +6,8 @@ if (typeof define !== 'function') {
 }
 
 define(
-  [ 'node-uuid', './../core/pool', './../server/game-server'], 
-  function (  UUID, Pool, GameServer) {
+  [ './../core/pool', './../server/game-server'], 
+  function ( Pool, GameServer) {
 
   'use strict'; 
   

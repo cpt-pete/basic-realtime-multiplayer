@@ -23,7 +23,7 @@ define(
 
     start: function(){
       this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
-      this.update_loop = new DeltaTimer(45, this.update.bind(this));
+      this.broadcast_loop = new DeltaTimer(45, this.broadcast_state.bind(this));
     },
 
     stop: function(){
@@ -76,7 +76,7 @@ define(
       }
     },
 
-    update : function(delta, time){
+    broadcast_state : function(delta, time){
 
       var players = this.state.players.as_array();
 
@@ -85,13 +85,13 @@ define(
 
       for(var i = 0; i < count; i++){
         var player = players[i];
-        
+
         state[player.id] = { 
           pos: player.pos.toObject(),
           is: player.input_store.processed_input_seq
         };
       }
-          
+          console.log(time);
       var update = {
         s: state,
         t: time
@@ -111,6 +111,9 @@ define(
       if(message_type === 'i') {
               //Input handler will forward this
         this._on_input(client, message_parts);
+      }
+      else if(message_type == 'p') {
+        client.send('s.p.' + message_parts[1]);
       }
 
     },
