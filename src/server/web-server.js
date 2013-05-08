@@ -1,5 +1,6 @@
 /*jshint node:true */
-/*global define: true */
+/*jshint -W079 */
+/*global define */
 
 if (typeof define !== 'function') {
     var define = require('amdefine')(module);

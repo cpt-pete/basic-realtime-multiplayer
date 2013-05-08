@@ -1,9 +1,8 @@
 /*jshint node:true */
-/*global define: true */
+/*jshint -W079 */
+/*global define */
 
-if (typeof define !== 'function') {
-    var define = require('amdefine')(module);
-}
+if (typeof define !== 'function') { var define = require('amdefine')(module); }
 
 define(
   ['./../core/game-state', './../core/vector-functions', './../core/point', './../core/delta-timer'], 
@@ -97,7 +96,7 @@ define(
         t: time
       };
 
-      this.io.sockets.in(this.room_id).emit('onserverupdate', update);
+      this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
 
     },    
 
@@ -112,7 +111,7 @@ define(
               //Input handler will forward this
         this._on_input(client, message_parts);
       }
-      else if(message_type == 'p') {
+      else if(message_type === 'p') {
         client.send('s.p.' + message_parts[1]);
       }
 
@@ -135,7 +134,7 @@ define(
 
       this.state.remove_player(player.id);
       
-      this.io.sockets.in(this.room_id).emit('player-left', { playerid: player.id } );  
+      this.io.sockets['in'](this.room_id).emit('player-left', { playerid: player.id } );  
       
     },    
     

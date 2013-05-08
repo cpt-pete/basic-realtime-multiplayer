@@ -1,4 +1,5 @@
- /*global define, document, io: true */
+ /*jshint browser:true */
+ /*global define, io: true */
 
 define(
   ["./core/game-state", "./client/game-client", "./client/renderer"], 
@@ -15,5 +16,7 @@ define(
   var renderer = new Renderer(game_state, viewport.getContext('2d'));
   
   new GameClient(io, game_state, renderer);
+
+  
     
 });

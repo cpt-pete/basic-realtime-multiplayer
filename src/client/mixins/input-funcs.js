@@ -1,7 +1,5 @@
-/*global 
-    THREEx,
-    define: true 
-*/
+/*jshint browser:true */
+/*global THREEx, define: true */
 
 define(
   function () {

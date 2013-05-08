@@ -1,7 +1,5 @@
-/*global 
-    define, 
-    require: true 
-*/
+/*jshint browser:true */
+/*global define:true */
 
 define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions"],
   function ( DeltaTimer, input_functions, math, vector_utils) {
@@ -60,12 +58,11 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         if(inputs.length){
           this.send_inputs(inputs);
         }
-       
 
         this.process_server_updates();
 
         this.renderer.update();
-        
+
         this.updateid = window.requestAnimationFrame( this.update.bind(this), this.viewportEl );
       },
 
@@ -74,7 +71,7 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         if(!this.server_updates.length){ 
           return;
         }
-        
+
         var latest_server_data = this.server_updates[this.server_updates.length-1];
         var my_server_pos = latest_server_data.s[this.me.id].pos;
         var my_last_input_seq_on_server = latest_server_data.s[this.me.id].is;
@@ -86,7 +83,6 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
 
           if(lastinputseq_index !== -1) {
 
-            var len = input_store.inputs.length;
             input_store.clear_upto_and_including(lastinputseq_index);      
 
             input_store.processed_input_seq = my_last_input_seq_on_server;
@@ -185,107 +181,96 @@ define(["./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functio
         } 
       },
 
-      process_server_updates : function() {
+      find_target_server_update_index: function(time, server_updates){
+        var count = server_updates.length-1;
+        var index = -1;
 
-          if(!this.server_updates.length){
-            return;
+            //We look from the 'oldest' updates, since the newest ones
+            //are at the end (list.length-1 for example). This will be expensive
+            //only when our time is not found on the timeline, since it will run all
+            //samples. Usually this iterates very little before breaking out with a target.
+        for(var i = 0; i < count; ++i) {
+
+            var point = server_updates[i];
+            var next_point = server_updates[i+1];
+
+                //Compare our point in time with the server times we have
+
+            if(time > point.t && time < next_point.t) {                
+              index = i;
+              break;
+            }
+        }
+
+        return index;
+
+      },
+
+      calculate_time_point: function(target_time, previous_time, current_time){
+
+          var how_far_in_past = math.toFixed(current_time - target_time, 3);
+          var difference_from_previous = math.toFixed(target_time - previous_time, 3);
+          var time_point = math.toFixed(how_far_in_past / difference_from_previous, 3);
+        
+          if( isNaN(time_point) ) {
+            time_point = 0;
+          }
+          if(time_point === -Infinity) {
+            time_point = 0;
+          }
+          if(time_point === Infinity){
+            time_point = 0;
           } 
 
+          return time_point;
+      },
 
-          //First : Find the position in the updates, on the timeline
-          //We call this current_time, then we find the past_pos and the target_pos using this,
-          //searching throught the server_updates array for current_time in between 2 other times.
-          // Then :  other player position = lerp ( past_pos, target_pos, current_time );
+      process_server_updates : function() {
 
-              //Find the position in the timeline of updates we stored.  
-          var count = this.server_updates.length-1;
-          var target = null;
-          var previous = null;
+        if(!this.server_updates.length){
+          return;
+        } 
+       
+        var target = null,
+          previous = null,
+          latest_server_data = this.server_updates[ this.server_updates.length-1 ],
+          target_index = this.find_target_server_update_index( this.client_time, this.server_updates );
 
-              //We look from the 'oldest' updates, since the newest ones
-              //are at the end (list.length-1 for example). This will be expensive
-              //only when our time is not found on the timeline, since it will run all
-              //samples. Usually this iterates very little before breaking out with a target.
-          for(var i = 0; i < count; ++i) {
+        if(target_index === -1) {
+          target = latest_server_data;
+          previous = latest_server_data;
+        }
+        else{
+          target = this.server_updates[target_index];
+          previous = target_index === 0 ? target : this.server_updates[target_index - 1];
+        }
 
-              var point = this.server_updates[i];
-              var next_point = this.server_updates[i+1];
+        for(var playerid in latest_server_data.s){
 
-                  //Compare our point in time with the server times we have
-
-              if(this.client_time > point.t && this.client_time < next_point.t) {
-                  target = next_point;
-                  previous = point;
-                  break;
-              }
+          if(this.me.id === parseInt(playerid, 10)){
+            continue;
           }
 
-              //With no target we store the last known
-              //server position and move to that instead
-          if(!target) {
-              target = this.server_updates[this.server_updates.length - 1];
-              previous = target;
-          }
+          if(!target.s[playerid] || !previous.s[playerid]){
+            continue;
+          }            
 
-              //Now that we have a target and a previous destination,
-              //We can interpolate between then based on 'how far in between' we are.
-              //This is simple percentage maths, value/target = [0,1] range of numbers.
-              //lerp requires the 0,1 value to lerp to? thats the one.
+          var player_latest = latest_server_data.s[ playerid ];
+          var player_target = target.s[ playerid ];
+          var player_previous = previous.s[ playerid ];
 
-           if(target && previous) {
+          var target_pos = player_target.pos;
+          var past_pos = player_previous.pos;
 
-              var target_time = target.t;
+          var player = this.state.find_player( playerid );
+          var time_point = this.calculate_time_point(target.t, previous.t, this.current_time);
 
-              var difference = target_time - this.client_time;
-              var max_difference = math.toFixed(target.t - previous.t, 3);
-              var time_point = math.toFixed(difference/max_difference, 3);
-                  //Because we use the same target and previous in extreme cases
-                  //It is possible to get incorrect values due to division by 0 difference
-                  //and such. This is a safe guard and should probably not be here. lol.
-              if( isNaN(time_point) ) {
-                time_point = 0;
-              }
-              if(time_point === -Infinity) {
-                time_point = 0;
-              }
-              if(time_point === Infinity){
-                time_point = 0;
-              } 
+          var lerped_pos = vector_utils.v_lerp( past_pos, target_pos, time_point );
+          var actual_pos = vector_utils.v_lerp( player.pos, lerped_pos, this.physics_loop.delta * this.client_smooth );                       
 
-
-                  //The most recent server update
-              var latest_server_data = this.server_updates[ this.server_updates.length-1 ];
-    
-              for(var playerid in latest_server_data.s){
-
-                if(this.me.id === parseInt(playerid, 10)){
-                  continue;
-                }
-
-                var player_latest = latest_server_data.s[playerid];
-
-                if(!target.s[playerid] || !previous.s[playerid]){
-                  continue;
-                }
-
-                var player_target = target.s[playerid];
-                var player_previous = previous.s[playerid];
-
-                var server_pos = player_latest.pos;
-                var target_pos = player_target.pos;
-                var past_pos = player_previous.pos;
-
-                var player = this.state.find_player(playerid);
-
-                var pos_lerp = vector_utils.v_lerp(past_pos, target_pos, time_point);
-                var pos = vector_utils.v_lerp( player.pos, pos_lerp, this.physics_loop.delta * this.client_smooth );                       
-
-                player.pos.x = pos.x;
-                player.pos.y = pos.y;
-            
-              }
-
-          }
+          player.pos.fromObject(actual_pos);
+      
+        }      
 
       },
 

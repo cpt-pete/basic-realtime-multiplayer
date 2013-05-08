@@ -1,6 +1,5 @@
-/*global 
-    define: true 
-*/
+/*jshint browser:true */
+/*global define: true */
 
 define([], function() {
   'use strict';  
@@ -25,6 +24,7 @@ define([], function() {
         var player = players[i];
         c.fillRect(player.pos.x - 5, player.pos.y - 5, 10, 10);  
       }
+      
     }
   };
 
