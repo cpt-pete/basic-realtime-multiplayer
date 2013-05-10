@@ -1,56 +1,16 @@
-# basic-realtime-multipler
+# Basic Realtime Multiplayer in NodeJS and browser
 
-The best project ever.
+This project is based an excellent article by Sven Bergström : [Real Time Multiplayer in HTML5](http://buildnewgames.com/real-time-multiplayer/).
+
+I've taken some of the source provided and simplified it.  The aim being to improve my understanding of how proper multiplayer games work.
+
+It represents a persistant world where clients can join / log off at any point.  Supports more than 2 players (hardcoded to 3 but could be any number).
 
 ## Getting Started
-### On the server
-Install the module with: `npm install basic-realtime-multipler`
 
-```javascript
-var basic_realtime_multipler = require('basic-realtime-multipler');
-basic_realtime_multipler.awesome(); // "awesome"
-```
-
-### In the browser
-Download the [production version][min] or the [development version][max].
-
-[min]: https://raw.github.com/petergledhill/basic-realtime-multipler/master/dist/basic-realtime-multipler.min.js
-[max]: https://raw.github.com/petergledhill/basic-realtime-multipler/master/dist/basic-realtime-multipler.js
-
-In your web page:
-
-```html
-<script src="dist/basic-realtime-multipler.min.js"></script>
-<script>
-awesome(); // "awesome"
-</script>
-```
-
-In your code, you can attach basic-realtime-multipler's methods to any object.
-
-```html
-<script>
-var exports = Bocoup.utils;
-</script>
-<script src="dist/basic-realtime-multipler.min.js"></script>
-<script>
-Bocoup.utils.awesome(); // "awesome"
-</script>
-```
-
-## Documentation
-_(Coming soon)_
-
-## Examples
-_(Coming soon)_
-
-## Contributing
-In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
-
-_Also, please don't edit files in the "dist" subdirectory as they are generated via Grunt. You'll find source code in the "lib" subdirectory!_
-
-## Release History
-_(Nothing yet)_
+- run 'npm install'
+- run 'src/node app.js'
+- navigate to http://localhost:5000
 
 ## License
 Copyright (c) 2013 Peter Gledhill  
