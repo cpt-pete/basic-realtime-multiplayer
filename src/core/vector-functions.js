@@ -25,6 +25,20 @@ define(["./math-functions"],
     //Simple linear interpolation between 2 vectors
     v_lerp : function(v,tv,t) { 
       return { x: maths.lerp(v.x, tv.x, t), y:maths.lerp(v.y, tv.y, t) }; 
+    },
+
+    v_distance : function( v1, v2 )
+    {
+      var xs = 0;
+      var ys = 0;
+       
+      xs = v2.x - v1.x;
+      xs = xs * xs;
+       
+      ys = v2.y - v1.y;
+      ys = ys * ys;
+       
+      return Math.sqrt( xs + ys );
     }
 
   };
