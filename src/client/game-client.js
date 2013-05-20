@@ -8,7 +8,9 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
 
     var defaults = {
       net_offset : 100,
-      client_smooth : 25
+      client_smooth : 25,
+      physics_rate:15,
+      physics_delta: 15 / 1000
     };
     
     function GameClient(options, io, state, renderer){          
@@ -37,7 +39,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
         this.me = this.state.find_player(me.id);
 
         this.time_loop = new DeltaTimer(4, function(){});
-        this.update_loop = new DeltaTimer(15, this.update.bind(this));
+        this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
         
         this.renderer.start();      
       },  
@@ -56,22 +58,16 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
 
           this.me.moves.add(move, t);
 
-          var result = this.state.calculate_move(this.me.pos, this.me.vel, move, 0.015);
-          this.me.accel = result.accel;
+          var result = this.me.apply_move( move, this.data.physics_delta );          
 
           this.server_move(t, move, result.accel, result.pos);          
-
-          
         }
         
-        this.state.tick(0.015);
-        
-    
-       // this.process_server_updates();
-
+        this.state.update( this.data.physics_delta );        
       },
         
-      server_move: function(time, move, accel, pos){         
+      server_move: function(time, move, accel, pos){   
+
         this.socket.emit("server_move", 
           {
             t:time,
@@ -83,25 +79,21 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
          
       },
 
-      move_autonomous : function(move, delta){
-       
-        var a = this.state.move_tick(this.me.pos, this.me.vel, this.me.accel, delta);
-        
-        this.me.pos = a.pos;
-        this.me.vel = a.vel;             
+      move_autonomous : function(move, delta){       
+        this.me.apply_move( move, delta );          
       },
 
       move_corrected: function(time, pos, vel){       
         console.log("corrected", arguments);
-        this.me.pos.set(pos);
-        this.me.vel.set(vel);
+        this.me.pos.set( pos );
+        this.me.vel.set( vel );
 
-        this.me.moves.clear_from_time(time);
+        this.me.moves.clear_from_time( time );
 
         var moves = this.me.moves.all();
         var l = moves.length;
         for(var i = 0; i < l; i++){
-          this.move_autonomous(moves[i], 0.015);
+          this.move_autonomous( moves[i], this.data.physics_delta );
         }
       },
 

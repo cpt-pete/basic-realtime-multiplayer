@@ -5,12 +5,21 @@
 if (typeof define !== 'function') { var define = require('amdefine')(module); }
 
 define(
-  ['./../core/game-state', './../core/vector-functions', './../core/point', './../core/delta-timer'], 
-  function ( GameState, vectors, Point, DeltaTimer) {
+  ['./../core/game-state', "underscore", './../core/vector-functions', './../core/point', './../core/delta-timer'], 
+  function ( GameState, _, vectors, Point, DeltaTimer) {
 
-  'use strict'; 
+  'use strict';
 
-  function GameServer(io, id){        
+  var defaults = {
+    physics_rate: 15,
+    physics_delta: 15 / 1000,
+    broadcast_rate: 100
+  }; 
+
+  function GameServer(io, id, options){     
+
+    this.data = _.extend(defaults, options);
+
     this.state = new GameState();
     this.max_players = 3;
     this.id = id;
@@ -22,8 +31,8 @@ define(
   GameServer.prototype = {
 
     start: function(){
-      this.update_loop = new DeltaTimer(15, this.update.bind(this));
-      this.broadcast_loop = new DeltaTimer(45, this.broadcast_state.bind(this));
+      this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
+      this.broadcast_loop = new DeltaTimer(this.data.broadcast_rate, this.broadcast_state.bind(this));
     },
 
     stop: function(){
@@ -49,23 +58,22 @@ define(
     },  
 
     get_client_delta: function(player_id, time){
-      return this.last_move_time[player_id] ? (time - this.last_move_time[player_id]) : 0.015;
+      return this.last_move_time[player_id] ? (time - this.last_move_time[player_id]) : this.data.physics_delta;
     },
 
     server_move: function(socket, player, time, move, accel, pos){
       var delta = this.get_client_delta(player.id, time);
       this.last_move_time[player.id] = time;
 
-      var move_result = this.state.calculate_move(player.pos, player.vel, move, 0.015);
-      player.accel = move_result.accel;  
-      
+      var move_result = player.apply_move(move, this.data.physics_delta);
+
       this.send_client_ajustment(socket, move_result, time, pos);   
 
     },
   
     update : function() {
 
-      this.state.tick(0.015);
+      this.state.update(this.data.physics_delta);
      /* var players = this.state.players.as_array();
       var count = players.length;
 
@@ -91,6 +99,7 @@ define(
     },
 
     send_client_ajustment : function(socket, move_result, time, pos){
+      console.log(pos, move_result.pos);
       if(move_result.pos.equals(pos)){
         socket.emit("good_move", time );
       }
