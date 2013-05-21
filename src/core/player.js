@@ -14,7 +14,7 @@ function(MoveStore, Point, vectors, math) {
     this.vel = new Point();
     this.accel = new Point();
     this.moves = new MoveStore();
-    this.speed = 400;
+    this.speed = 100;
   }  
 
   Player.prototype = {
@@ -46,61 +46,71 @@ function(MoveStore, Point, vectors, math) {
         }      
     },
 
-    apply_move: function(  move, delta ){
-      this.accel = this.calculate_acceleration( move );
-      var result = this.tick_result(delta);     
-
-      return {pos:result.pos, vel: result.vel, accel:this.accel };
-    },
-   
-    calculate_acceleration : function( moves ){
-      var c = moves.length;
-      var v = new Point();      
-
-      for(var i = 0; i < c; ++i) {
-        var key = moves[i];
-        if(key === 'l') {
-          v.x -= this.speed;
-        }
-        if(key === 'r') {
-          v.x += this.speed;
-        }
-        if(key === 'd') {
-          v.y += this.speed;
-        }
-        if(key === 'u') {
-          v.y -= this.speed;
-        }
-      } 
-
-      return v;
-    },
-
-
-    tick_and_apply :function(delta){
-
-      var result = this.tick_result(delta);
+  
+    apply_move : function( move ){
+      var c = move.length;    
 
       this.accel.nill();
-      this.pos = result.pos;
-      this.vel = result.vel;     
+
+      for(var i = 0; i < c; ++i) {
+        var key = move[i];
+        if(key === 'l') {
+          this.accel.x -= this.speed;
+        }
+        if(key === 'r') {
+          this.accel.x += this.speed;
+        }
+        if(key === 'd') {
+          this.accel.y += this.speed;
+        }
+        if(key === 'u') {
+          this.accel.y -= this.speed;
+        }
+      } 
     },
 
-    tick_result: function( delta ){
+
+    update :function(delta){
+
+      var tick_result = this.simulate_tick(delta);
+  
+      this.pos = tick_result.pos;
+      this.vel = tick_result.vel;     
+    },
+
+    simulate_tick: function( delta ){
+
+      var friction = 0.8;
+
       var new_pos = this.pos.clone();
       var new_vel = this.vel.clone();
 
       new_pos.x += this.vel.x * delta; 
       new_pos.y += this.vel.y * delta; 
-      new_vel.x += this.accel.x * delta;
-      new_vel.y += this.accel.y * delta;
+
+      new_pos.toFixed();  
+
+      new_vel.x += this.accel.x;
+      new_vel.y += this.accel.y;
       
+      new_vel.toFixed(); 
+
+      var speed = Math.sqrt(new_vel.x*new_vel.x + new_vel.y*new_vel.y)
+
+      if(speed > friction){
+        new_vel.x *= friction;
+        new_vel.y *= friction;
+      }
+      else{
+        new_vel.nill();
+      }
+
       new_vel.toFixed();      
       new_pos.toFixed();   
 
       this.constrain_to_world( new_pos, new_vel );  
       
-      return{pos:new_pos, vel:new_vel};     
+      return{pos:new_pos, vel:new_vel, accel:this.accel};     
     },
 
     process_update : function(target, past, delta, time, smooth){

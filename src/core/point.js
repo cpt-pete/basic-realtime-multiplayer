@@ -57,6 +57,12 @@ function(math) {
     return this;
   };
 
+  proto.floor = function(){
+    this.x = Math.floor(this.x);
+    this.y = Math.floor(this.y);
+    return this;
+  },
+
   proto.toObject = function() {
     return {
       x: this.x,

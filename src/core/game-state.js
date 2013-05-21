@@ -44,9 +44,9 @@ function(Player, Pool, math, vectors, Point) {
 
       for(var i = 0; i < l; i++){
         var player = players[i];
-        player.tick_and_apply(delta);
+        player.update(delta);
       }
-    },
+    }/*,
 
     direction_vector_for_moves_array : function( moves_array ) {
        
@@ -62,7 +62,7 @@ function(Player, Pool, math, vectors, Point) {
         } 
         
         return total_vector;    
-    }
+    }*/
   };
 
   return GameState;

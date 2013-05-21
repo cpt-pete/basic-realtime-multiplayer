@@ -1,15 +1,16 @@
 /*jshint browser:true */
 /*global define:true */
 
-define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions", "./update-store"],
-  function ( _, DeltaTimer, input_functions, math, vectors, UpdateStore) {
+define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions", "./update-store", "./../core/point"],
+  function ( _, DeltaTimer, input_functions, math, vectors, UpdateStore, Point) {
 
     'use strict';
+
 
     var defaults = {
       net_offset : 100,
       client_smooth : 25,
-      physics_rate:15,
+      physics_rate: 15,
       physics_delta: 15 / 1000
     };
     
@@ -20,8 +21,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
       this.renderer = renderer;
       this.updateid = 0;
 
-      this.updates = new UpdateStore();      
-      this.seq = 0;
+      this.updates = new UpdateStore();     
 
       this.server_time = 0;
       this.client_time = 0;
@@ -38,72 +38,94 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
 
         this.me = this.state.find_player(me.id);
 
-        this.time_loop = new DeltaTimer(4, function(){});
+        this.time_loop = new DeltaTimer(1, function(){});
         this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
         
         this.renderer.start();      
       },  
      
       stop: function(){
+        this.time_loop.stop();
         this.update_loop.stop();
         this.renderer.stop();
       },
      
       update: function(delta, time){
-              
+
+        var t = math.toFixed(this.time_loop.time, 3);       
         var move = this.sample_inputs();
 
-        if(move.length){          
-          var t = math.toFixed(time, 3);   
+        this.me.apply_move( move );
 
-          this.me.moves.add(move, t);
+        var result = this.me.simulate_tick( this.data.physics_delta );                 
 
-          var result = this.me.apply_move( move, this.data.physics_delta );          
+        this.me.moves.add(move, t);
 
-          this.server_move(t, move, result.accel, result.pos);          
-        }
+        //if(move.length){          
+          this.server_move(t, move, result.accel, result.pos);                         
+       // }
+       
         
         this.state.update( this.data.physics_delta );        
       },
         
       server_move: function(time, move, accel, pos){   
-
-        this.socket.emit("server_move", 
-          {
+        this.send_server_message(
+          this.socket, 
+          "server_move", {
             t:time,
             m:move,
             p:pos.toObject(),
             a:accel.toObject()
-          }
-        );  
-         
+          });         
       },
 
-      move_autonomous : function(move, delta){       
-        this.me.apply_move( move, delta );          
+      send_server_message: function(socket, message, data){ 
+        setTimeout(function(){
+          socket.emit( message , data ); 
+        }, 0);         
       },
 
-      move_corrected: function(time, pos, vel){       
-        console.log("corrected", arguments);
+      move_autonomous : function(move, delta){    
+        this.me.apply_move( move );  
+        this.me.update(delta);        
+      },
+
+      move_corrected: function(time, pos, vel){  
+     /*   var posPoint = new Point(pos.x, pos.y);
+        var distance = posPoint.distance(this.me.pos);
+        var lerp_time = 1;
+
+        if(distance > 50){
+          lerp_time = 0.3;
+        }
+        else if(distance > 10){
+          lerp_time = 0.7;
+        }
+
+        this.me.pos = Point.lerp(this.me.pos, new Point(pos.x, pos.y), lerp_time) ;*/
+
         this.me.pos.set( pos );
         this.me.vel.set( vel );
 
         this.me.moves.clear_from_time( time );
 
         var moves = this.me.moves.all();
+
         var l = moves.length;
+
         for(var i = 0; i < l; i++){
-          this.move_autonomous( moves[i], this.data.physics_delta );
+          this.move_autonomous( moves[i].move, this.data.physics_delta );
         }
       },
 
       move_confirmed:function(time){
-        console.log("confirmed", arguments);
         this.me.moves.clear_from_time(time);
       },
 
       update_ping: function(t){
-        this.ping = this.time_loop.time - t;
+        var now = math.toFixed(this.time_loop.time, 3);         
+        this.ping = Math.floor((now - t) * 1000);
         console.log(this.ping);
       },
      

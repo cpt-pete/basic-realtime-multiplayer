@@ -25,7 +25,9 @@ define(
     this.id = id;
     this.room_id = "g" + this.id;
     this.io = io;
-    this.last_move_time = {};
+
+    this.moves = {};
+    this.sockets = {};
   }
 
   GameServer.prototype = {
@@ -41,7 +43,7 @@ define(
     },
 
     add_player : function(socket){ 
-
+      
       this.state.add_players([{
         id:socket.clientid, 
         pos:{
@@ -52,26 +54,57 @@ define(
 
       var player = this.state.find_player(socket.clientid);
 
+      this.sockets[player.id] = socket;
+
+      this.moves[player.id] = [];
+
       this._join_room(socket, player);      
       this._broadcast_initial_state(socket, player);      
       this._broadcast_player_joined(socket, player);
-    },  
+    },     
 
-    get_client_delta: function(player_id, time){
-      return this.last_move_time[player_id] ? (time - this.last_move_time[player_id]) : this.data.physics_delta;
-    },
-
-    server_move: function(socket, player, time, move, accel, pos){
-      var delta = this.get_client_delta(player.id, time);
-      this.last_move_time[player.id] = time;
-
-      var move_result = player.apply_move(move, this.data.physics_delta);
-
-      this.send_client_ajustment(socket, move_result, time, pos);   
-
+    server_move: function(socket, player, time, move, accel, pos){     
+      player.apply_move(move);
+      var move_result = player.simulate_tick(this.data.physics_delta);
+      this.send_client_ajustment(socket, move_result, time, pos);       
     },
   
     update : function() {
+
+      var players = this.state.players.as_array();
+      var count = players.length;
+
+      for (var i = 0; i < count; i++) {  
+
+        var player = players[i];
+
+        if(this.moves[player.id].length){      
+
+          var icount = this.moves[player.id].length;
+
+          var move_data, move, time, pos, move_result;   
+          var socket = this.sockets[player.id];
+
+          for(var j = 0; j < icount; j++){    
+            
+            move_data = this.moves[player.id][j].move_data;
+            move = move_data.m;      
+            time = move_data.t;   
+            pos = move_data.p;   
+
+            player.apply_move( move );
+            
+           // move_result = player.simulate_tick( this.data.physics_delta );            
+          }
+
+          /*if(icount){
+            this.send_client_ajustment(socket, move_result, time, pos);                 
+          }*/
+        }
+
+        this.moves[player.id] = [];
+      }
+        
 
       this.state.update(this.data.physics_delta);
      /* var players = this.state.players.as_array();
@@ -98,19 +131,28 @@ define(
       }*/
     },
 
-    send_client_ajustment : function(socket, move_result, time, pos){
-      console.log(pos, move_result.pos);
+    send_client_ajustment : function(socket, move_result, time, pos){      
       if(move_result.pos.equals(pos)){
-        socket.emit("good_move", time );
+        this.send_client_message( socket, "good_move", time );
       }
       else{
-      //  console.log(arguments);
-       socket.emit("ajust_move", {
-          t: time,
-          p: move_result.pos.toObject(),
-          v: move_result.vel.toObject()
-        });
+        console.log("ajust", time, move_result.pos.toObject(),  pos);
+        this.send_client_message(
+          socket, 
+          "ajust_move", 
+          {
+            t: time,
+            p: move_result.pos.toObject(),
+            v: move_result.vel.toObject()
+          }
+        );
       }
+    },
+
+    send_client_message : function(socket, message, data){    
+      setTimeout(function(){
+        socket.emit( message, data );
+      }, 0);      
     },
 
     broadcast_state : function(delta, time){
@@ -151,7 +193,10 @@ define(
     // possible for user to send more requests than are possible, resulting in a speed hack
     // need to add detection to ensure updates aren't too frequent
     _on_server_move_received : function(socket, move_data){      
-      var player = this.state.find_player(socket.clientid);      
+      var player = this.state.find_player(socket.clientid);  
+
+      this.moves[player.id].push({socket:socket, move_data:move_data});
+
       this.server_move(socket, player, move_data.t, move_data.m, move_data.a, move_data.p);
     },
 
