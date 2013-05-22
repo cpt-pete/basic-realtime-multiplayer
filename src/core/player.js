@@ -15,6 +15,7 @@ function(MoveStore, Point, vectors, math) {
     this.accel = new Point();
     this.moves = new MoveStore();
     this.speed = 100;
+    this.colour = data.colour;
   }  
 
   Player.prototype = {
@@ -95,7 +96,7 @@ function(MoveStore, Point, vectors, math) {
       
       new_vel.toFixed(); 
 
-      var speed = Math.sqrt(new_vel.x*new_vel.x + new_vel.y*new_vel.y)
+      var speed = Math.sqrt(new_vel.x*new_vel.x + new_vel.y*new_vel.y)     
 
       if(speed > friction){
         new_vel.x *= friction;
@@ -103,7 +104,7 @@ function(MoveStore, Point, vectors, math) {
       }
       else{
         new_vel.nill();
-      }
+      } 
 
       new_vel.toFixed();      
       new_pos.toFixed();   
@@ -135,16 +136,15 @@ function(MoveStore, Point, vectors, math) {
       var lerped_pos = vectors.v_lerp( past.pos, target.pos, time_point );
       var actual_pos = vectors.v_lerp( this.pos, lerped_pos, delta * smooth);   
 
-      this.pos.fromObject(actual_pos);
-     
-
+      this.pos.set(actual_pos);     
       
     },
 
     toObject : function() {
       return { 
         id : this.id, 
-        pos : this.pos.toObject() 
+        pos : this.pos.toObject(),
+        colour: this.colour
       };
     }
   };  

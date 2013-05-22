@@ -1,7 +1,7 @@
 {
   "name": "basic-realtime-multipler",
   "description": "A basic example of multiplayer networking using node.js and HTML5.",
-  "version": "0.1.0-26",
+  "version": "0.1.0-27",
   "homepage": "https://github.com/petergledhill/basic-realtime-multipler",
   "author": {
     "name": "Peter Gledhill",
