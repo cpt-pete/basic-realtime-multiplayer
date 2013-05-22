@@ -58,7 +58,7 @@ function(Player, Pool, math, vectors, Point) {
    
    
     client_update: function(delta, me){
-      var players = this.players.as_array();
+      /*var players = this.players.as_array();
       var l = players.length;
 
       for(var i = 0; i < l; i++){
@@ -66,7 +66,7 @@ function(Player, Pool, math, vectors, Point) {
         if(player.id !== me.id){
           player.update(delta);
         }
-      }
+      }*/
     },
 
     server_update: function(delta){

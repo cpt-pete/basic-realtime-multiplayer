@@ -60,9 +60,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
         var move = this.sample_inputs();
 
         this.me.moves.add(move, t);
-
         this.move_autonomous( move, this.data.physics_delta );
-
         this.server_move(t, move, this.me.accel, this.me.pos);                           
       },
         
@@ -91,11 +89,9 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
       move_corrected: function(time, pos, vel){  
         this.me.pos.set( pos );
         this.me.vel.set( vel );
-
         this.me.moves.clear_from_time( time );
 
         var moves = this.me.moves.all();
-
         var l = moves.length;
 
         for(var i = 0; i < l; i++){
@@ -120,10 +116,10 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
        
        var previous, target, 
             latest = this.updates.latest(),
-            surrounding = this.updates.surrounding( this.client_time );
+            surrounding = this.updates.surrounding( this.time );
 
         if(surrounding === null) {
-          surrounding = {before: latest, after: latest };          
+          return;
         }
         
         previous = surrounding.before;
@@ -141,12 +137,9 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
 
           var player_target = target.s[ playerid ];
           var player_previous = previous.s[ playerid ];
-          var player = this.state.find_player( playerid );
+          var player = this.state.find_player( playerid );      
 
-          player.pos.set(player_target.pos);
-          player.vel.set(player_target.vel);
-
-          //player.process_update(player_target, player_previous, this.data.physics_delta, this.client_time, this.data.client_smooth);
+          player.process_update(player_target, target.t, player_previous, previous.t, this.data.physics_delta, this.time);
       
         }      
 
@@ -158,7 +151,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
       },
      
      on_serverupdate_recieved : function(data){
-       // this.update_time_from_server(data.t);
+        this.time = Math.floor(data.t - this.ping / 2 / 1000);
         this.updates.record(data);   
       },
 
