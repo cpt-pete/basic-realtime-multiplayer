@@ -13,15 +13,11 @@ require.config({
 });
 
 define(
-  ["./core/game-state", "./client/game-client", "./client/renderer"], 
-  function (GameState, GameClient, Renderer) {
+  ["./client/game-client"], 
+  function ( GameClient ) {
 
   'use strict';
 
-  var game_state = new GameState();
-  var viewport = document.getElementById('viewport');
-  var renderer = new Renderer(game_state, viewport);
-  
-  new GameClient({}, io, game_state, renderer);  
+  new GameClient({}, io);  
     
 });

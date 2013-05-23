@@ -1,17 +1,27 @@
 /*jshint browser:true */
 /*global define: true */
 
-define(function() {
+define(["underscore"], function(_) {
   'use strict';  
+
+  var defaults = {
+    viewport_el:"viewport"      
+  };
   
-  function Renderer(state, view) {
+  function Renderer(options, game_client) {
 
-    view.width = state.w;
-    view.height = state.h;
+    this.data = _.extend(defaults, options);
 
+    var view = document.getElementById(this.data.viewport_el);
+
+    this.game_client = game_client;
     this.view = view;
-    this.context = view.getContext("2d");
-    this.state = state;
+    this.state = game_client.state;
+
+    view.width = this.state.w;
+    view.height = this.state.h;
+   
+    this.context = this.view.getContext("2d");    
   }
 
   Renderer.prototype = {
@@ -30,8 +40,6 @@ define(function() {
 
       c.clearRect(0,0,this.state.w, this.state.h);      
 
-      
-
       var players = this.state.players.as_array();
       var count = players.length;
 
@@ -40,6 +48,10 @@ define(function() {
         c.fillStyle =player.colour;
         c.fillRect(player.pos.x - 5, player.pos.y - 5, 10, 10);          
       }
+
+      c.font = "12px Arial";
+      c.fillText( this.game_client.ping, this.state.w - 30 , 10 );
+
       this.updateid = window.requestAnimationFrame( this.update.bind(this), this.view );      
     }
   };
