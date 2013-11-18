@@ -5,8 +5,8 @@
 
 if (typeof define !== 'function') {  var define = require('amdefine')(module); }
 
-define(["./math-functions"],
-function(math) {
+define(
+function() {
   'use strict'; 
 
   var sqrt = Math.sqrt; 
@@ -26,7 +26,7 @@ function(math) {
     this.x = 0;
     this.y = 0;
     return this;
-  };
+  }
 
   proto.equals = function(toCompare) {
     return this.x === toCompare.x && this.y === toCompare.y;
@@ -50,11 +50,6 @@ function(math) {
     return this;
   }; 
 
-  proto.toFixed = function(){    
-    this.x = math.toFixed(this.x, 3);
-    this.y = math.toFixed(this.y, 3);
-    return this;
-  };
 
   proto.toObject = function() {
     return {
@@ -62,10 +57,6 @@ function(math) {
       y: this.y 
     };
   };
-
-   proto.toString = function() {
-    return "x:"+this.x+",y:"+this.y;
-   };
 
   proto.distance = function(toPoint) {
     var hside = this.x - toPoint.x;

@@ -12,7 +12,7 @@ function(Player, Pool, math, vectors, Point) {
     this.h = 500;
     this.w = 400;
     this.players = new Pool();
-    this.playerspeed = 400;
+    this.playerspeed = 200;
   }
 
   GameState.prototype = {
@@ -41,25 +41,25 @@ function(Player, Pool, math, vectors, Point) {
     constrain_to_world : function( pos, vel ) {
 
             //Left wall.
-        if(pos.x < 0) {
+        if(pos.x <= 0) {
             pos.x = 0;
             vel.x = 0;
         }
 
             //Right wall
-        if(pos.x > this.w ) {
+        if(pos.x >= this.w ) {
             pos.x = this.w;
             vel.x = 0;
         }
         
             //Roof wall.
-        if(pos.y < 0) {
+        if(pos.y <= 0) {
             pos.y = 0;
             vel.y = 0;
         }
 
             //Floor wall
-        if(pos.y > this.h ) {
+        if(pos.y >= this.h ) {
             pos.y = this.h;
             vel.y = 0;
         }      
@@ -81,7 +81,7 @@ function(Player, Pool, math, vectors, Point) {
         var player = players[i];
         var a = this.move_tick(player.pos, player.vel, player.accel, delta);
 
-        player.accel.nill();
+        
         player.pos = a.pos;
         player.vel = a.vel;     
       }
@@ -90,29 +90,21 @@ function(Player, Pool, math, vectors, Point) {
 
     move_tick: function(pos, vel, accel, delta){
      
-      var new_vel = vel.clone();
-      var new_pos = pos.clone();
-
-      new_pos.x += vel.x * delta; 
-      new_pos.y += vel.y * delta; 
-      new_vel.x += accel.x * delta;
-      new_vel.y += accel.y * delta;
-/*
+      var friction = 0.9;
       
-      new_vel.x = delta * accel.x + vel.x;
-      new_vel.y = delta * accel.y + vel.y;
+      var new_vel = new Point();
+      new_vel.x = delta * accel.x;
+      new_vel.y = delta * accel.y;
 
-      new_vel.x = new_vel.x * friction;
-      new_vel.y = new_vel.y * friction;
+      new_vel.x = math.toFixed(new_vel.x, 3);
+      new_vel.y = math.toFixed(new_vel.y, 3);
 
-      console.log(new_vel.toString(), accel.toString());
+      var new_pos = new Point();
+      new_pos.x = delta * vel.x + pos.x;
+      new_pos.y = delta * vel.y + pos.y;
 
-      
-      new_pos.x = delta * new_vel.x + pos.x;
-      new_pos.y = delta * new_vel.y + pos.y;*/
-
-      new_vel.toFixed();      
-      new_pos.toFixed();   
+      new_pos.x = math.toFixed(new_pos.x, 3);
+      new_pos.y = math.toFixed(new_pos.y, 3);
 
       this.constrain_to_world( new_pos, new_vel );  
       

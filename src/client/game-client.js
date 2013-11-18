@@ -59,7 +59,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
           var result = this.state.calculate_move(this.me.pos, this.me.vel, move, 0.015);
           this.me.accel = result.accel;
 
-          this.server_move(t, move, result.accel, result.pos);          
+          //this.server_move(t, move, result.accel, result.pos);          
 
           
         }
