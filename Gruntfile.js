@@ -11,26 +11,7 @@ module.exports = function(grunt) {
       '<%= pkg.homepage ? "* " + pkg.homepage + "\\n" : "" %>' +
       '* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
       ' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */\n',
-    // Task configuration.
-    concat: {
-      options: {
-        banner: '<%= banner %>',
-        stripBanners: true
-      },
-      dist: {
-        src: ['src/<%= pkg.name %>.js'],
-        dest: 'dist/<%= pkg.name %>.js'
-      },
-    },
-    uglify: {
-      options: {
-        banner: '<%= banner %>'
-      },
-      dist: {
-        src: '<%= concat.dist.dest %>',
-        dest: 'dist/<%= pkg.name %>.min.js'
-      },
-    },   
+    // Task configuration.   
     jshint: {
       options: {
         jshintrc: '.jshintrc'
@@ -64,10 +45,17 @@ module.exports = function(grunt) {
     },
     requirejs: {
       compile: {
+
         options: {
+            fileExclusionRegExp: /\underscore$/,
+            paths: {
+            underscore: './../lib/underscore',
+            },
+            modules: [
+                { name: "client", include:["client"], exclude: ["underscore"] },
+            ],
           baseUrl: "src/",
-          name:"client",
-          out: "dist/basic-realtime-multiplayer-client.min.js"
+          dir: "dist"
         }
       }
   }

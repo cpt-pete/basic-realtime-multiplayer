@@ -1,30 +1,59 @@
 /*jshint browser:true */
 /*global define: true */
 
-define([], function() {
+define(["underscore"], function(_) {
   'use strict';  
+
+  var defaults = {
+    viewport_el:"viewport"      
+  };
   
-  function Renderer(state, context) {
-    this.context = context;
-    this.state = state;
+  function Renderer(options, game_client, world) {
+
+    this.data = _.extend(defaults, options);
+
+    var view = document.getElementById(this.data.viewport_el);
+
+    this.game_client = game_client;
+    this.view = view;
+    this.state = game_client.state;
+    this.world = world;
+
+
+    view.width = this.world.w;
+    view.height = this.world.h;
+   
+    this.context = this.view.getContext("2d");    
   }
 
   Renderer.prototype = {
+
+    start: function(){
+      this.updateid = 0;
+      this.update();
+    },
+
+    stop: function(){
+      window.cancelAnimationFrame();
+    },    
+
     update: function(){
       var c = this.context;
 
-      c.clearRect(0,0,this.state.w, this.state.h);      
+      c.clearRect(0,0,this.world.w, this.world.h);      
 
-      c.fillStyle ="#FF0000";
-
-      var players = this.state.players.as_array();
-      var count = players.length;
+      var actors = this.state.as_array();
+      var count = actors.length;
 
       for(var i = 0; i < count; i++){
-        var player = players[i];
-        c.fillRect(player.pos.x - 5, player.pos.y - 5, 10, 10);  
+        var actor = actors[i];
+        actor.render(c);        
       }
-      
+
+      c.font = "12px Arial";
+      c.fillText( this.game_client.ping, this.world.w - 30 , 10 );
+
+      this.updateid = window.requestAnimationFrame( this.update.bind(this), this.view );      
     }
   };
 

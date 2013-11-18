@@ -5,94 +5,114 @@
 if (typeof define !== 'function') { var define = require('amdefine')(module); }
 
 define(
-  ['./../core/game-state', './../core/vector-functions', './../core/point', './../core/delta-timer'], 
-  function ( GameState, vector_utils, Point, DeltaTimer) {
+  ['./../core/state', "underscore", './../core/delta-timer', './../core/player', "./../core/world", "./../core/math-functions"], 
+  function ( State, _,  DeltaTimer, Player, World, math) {
 
-  'use strict'; 
+  'use strict';
 
-  function GameServer(io, id){        
-    this.state = new GameState();
+  var defaults = {
+    physics_rate: 15,
+    physics_delta: 15 / 1000,
+    broadcast_rate: 100
+  }; 
+
+  function GameServer(io, id, options){     
+
+    this.data = _.extend(defaults, options);
+
+    this.player_count = 0;
     this.max_players = 3;
     this.id = id;
     this.room_id = "g" + this.id;
     this.io = io;
+
   }
 
   GameServer.prototype = {
 
     start: function(){
-      this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
-      this.broadcast_loop = new DeltaTimer(45, this.broadcast_state.bind(this));
+      this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
+      this.broadcast_loop = new DeltaTimer(this.data.broadcast_rate, this.broadcast_state.bind(this));
+
+      this.state = new State();
+      this.world = new World(400, 500);
+
+      this.start_time = new Date().getTime();
     },
 
     stop: function(){
-      this.physics_loop.stop();
       this.update_loop.stop();
+      this.broadcast_loop.stop();
+
+      delete this.state;
+    },
+
+    has_capacity: function(){
+      return this.player_count < this.max_players;
+    },
+
+    time: function(){
+      return new Date().getTime() - this.start_time;
     },
 
     add_player : function(socket){ 
-
-      this.state.add_players([{
-        id:socket.clientid, 
+           
+      var player = new Player({
+        id: socket.clientid, 
         pos:{
-          x:Math.random() * this.state.w,
-          y:Math.random() * this.state.h
-        }
-      }]);
+          x: math.toFixed( Math.random() * this.world.w, 3 ),
+          y: math.toFixed( Math.random() * this.world.h, 3)
+        },
+        colour: '#' + (0x1000000 + Math.random() * 0xFFFFFF).toString(16).substr(1,6)
+      });
 
-      var player = this.state.find_player(socket.clientid);
+      this.state.add ( player );
+      this.player_count++;
+      //this.state._default.add( Player.default_snapshot( player ) );
+    
+      this.join_room(socket, player);    
+    },     
 
-      this._join_room(socket, player);      
-      this._broadcast_initial_state(socket, player);      
-      this._broadcast_player_joined(socket, player);
-    },  
+    server_move: function(socket, player, time, move, client_accel, client_pos){     
+      player.controller.apply_move(move, this.data.physics_delta);          
 
-    update_physics : function() {
+      this.send_client_ajustment(socket, player.pos, player.vel, time, client_pos);
+    },
+  
+    update : function() {
+     // this.state.server_update(this.data.physics_delta);   
+    },
 
-      var players = this.state.players.as_array();
-      var count = players.length;
-
-      for (var i = 0; i < count; i++) {        
-
-        var player = players[i];
-
-        if(player.input_store.inputs.length === 0){
-          continue;
-        }
-
-        var new_dir = this.state.calculate_direction_vector(player.input_store.inputs);
-        var resulting_vector = this.state.physics_movement_vector_from_direction(new_dir.x_dir, new_dir.y_dir);
-        var pos = vector_utils.v_add(player.pos, resulting_vector);
-
-        player.pos.x = pos.x;
-        player.pos.y = pos.y;
-
-        player.input_store.mark_all_processed();
-
-        this.state.constrain_to_world(player);
-
-        player.input_store.clear();
+    send_client_ajustment : function(socket, server_pos, server_vel, time, client_pos){     
+      if(server_pos.equals(client_pos)){
+        this.send_client_message( socket, "good_move", time );
+      }
+      else{
+        this.send_client_message(
+          socket, 
+          "ajust_move", 
+          {
+            t: time,
+            p: server_pos.toObject(),
+            v: server_vel.toObject()
+          }
+        );
       }
     },
 
-    broadcast_state : function(delta, time){
+    send_client_message : function(socket, message, data){    
+      setTimeout(function(){
+        socket.emit( message, data );
+      }, 0);      
+    },
 
-      var players = this.state.players.as_array();
+    broadcast_state : function(){
 
-      var state = {};
-      var count = players.length;
-
-      for(var i = 0; i < count; i++){
-        var player = players[i];
-
-        state[player.id] = { 
-          pos: player.pos.toObject(),
-          is: player.input_store.processed_input_seq
-        };
-      }
-          console.log(time);
+      // get player state, compare with master - broadcast difference
+      var time = this.time();      
+      
       var update = {
-        s: state,
+        s: this.state.snapshot(),
         t: time
       };
 
@@ -100,73 +120,40 @@ define(
 
     },    
 
-    _on_message : function(client,message) {
+    // note: we're reliying on clients update loop to determine speed of server moves
+    // possible for user to send more requests than are possible, resulting in a speed hack
+    // need to add detection to ensure updates aren't too frequent
+    _on_server_move_received : function(socket, move_data){      
+      var player = this.state.find(socket.clientid);          
 
-          //Cut the message up into sub components
-      var message_parts = message.split('.');
-          //The first is always the type of message
-      var message_type = message_parts[0];
-
-      if(message_type === 'i') {
-              //Input handler will forward this
-        this._on_input(client, message_parts);
-      }
-      else if(message_type === 'p') {
-        client.send('s.p.' + message_parts[1]);
-      }
-
-    },
-
-    _on_input : function(client, parts) {
-      //The input commands come in like u-l,
-      //so we split them up into separate commands,
-      //and then update the players
-      var input_commands = parts[1].split('-');
-      var input_time = parts[2].replace('-','.');
-      var input_seq = parseInt(parts[3], 10);
-
-      this.state.store_input(client.clientid, input_commands, input_time, input_seq);
+      this.server_move(socket, player, move_data.t, move_data.m, move_data.a, move_data.p);
     },
 
     _on_player_disconnected : function(clientid){
+      var player = this.state.find(clientid);
+      this.state.remove(player.id);  
+      this.player_count--;
 
-      var player = this.state.find_player(clientid);
-
-      this.state.remove_player(player.id);
-      
-      this.io.sockets['in'](this.room_id).emit('player-left', { playerid: player.id } );  
-      
+      this.io.sockets['in'](this.room_id).emit('event', { name:"player-left", data: player.id } );        
     },    
     
-    _join_room: function(socket, player){
-      
-      socket.join(this.room_id);   
+    join_room: function(socket, player){            
 
       socket.on("disconnect", function(){        
         this._on_player_disconnected(socket.clientid);
       }.bind(this));
 
-      socket.on("message", function(m){
-        this._on_message(socket, m);
-      }.bind(this));
+      socket.on("server_move", function(data){
+        this._on_server_move_received(socket, data);
+      }.bind(this));        
 
-    },
+      socket.join(this.room_id); 
 
-    _broadcast_initial_state: function(socket, player){
+      var snapshot = player.snapshot();
 
-      var others = this.state.players.as_array()
-        .filter(
-          function(p){ return (p.id !== player.id); }
-        )
-        .map(
-          function(p){ return p.toObject(); }
-        );
-      socket.emit('entered-game', {room_id:this.room_id, me:player.toObject(), others: others});  
-    },
-
-    _broadcast_player_joined: function(socket, player){
-      socket.broadcast.to(this.room_id).emit('player-joined', { player: player.toObject() } );  
-    }
+      socket.emit('event', {name:"joined", data:snapshot});  
+      socket.broadcast.to(this.room_id).emit('event', { name:"player-joined", data: snapshot } ); 
+    }    
 
   };
 

@@ -1,7 +1,7 @@
 {
   "name": "basic-realtime-multipler",
-  "description": "The best project ever.",
-  "version": "0.1.0-14",
+  "description": "A basic example of multiplayer networking using node.js and HTML5.",
+  "version": "0.1.0-31",
   "homepage": "https://github.com/petergledhill/basic-realtime-multipler",
   "author": {
     "name": "Peter Gledhill",
@@ -33,7 +33,8 @@
     "express": ">= 3.1.0",
     "socket.io": "0.9.x",
     "requirejs": "~2.0",
-    "amdefine": ">=0.0.2"
+    "amdefine": ">=0.0.2",
+    "underscore": "1.4.4"
   },
   "devDependencies": {
     "grunt-contrib-jshint": "~0.4.3",
