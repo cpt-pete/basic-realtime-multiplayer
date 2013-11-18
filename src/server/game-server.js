@@ -25,6 +25,9 @@ define(
     this.id = id;
     this.room_id = "g" + this.id;
     this.io = io;
+
+    this.moves = {};
+    this.sockets = {};
   }
 
   GameServer.prototype = {
@@ -54,13 +57,18 @@ define(
 
       var player = this.state.find_player(socket.clientid);
 
+      this.sockets[player.id] = socket;
+
+      this.moves[player.id] = [];
+
       this._join_room(socket, player);      
       this._broadcast_initial_state(socket, player);      
       this._broadcast_player_joined(socket, player);
     },     
 
     server_move: function(socket, player, time, move, client_accel, client_pos){     
-      player.controller.apply_move(move, this.data.physics_delta);      
+      player.apply_move(move);
+      player.update(this.data.physics_delta);
       this.send_client_ajustment(socket, player.pos, player.vel, time, client_pos);       
     },
   

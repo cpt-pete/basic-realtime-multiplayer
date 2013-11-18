@@ -1,10 +1,11 @@
 /*jshint browser:true */
 /*global define:true */
 
-define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-store", "./renderer", "./../core/game-state", "./../core/math-functions", "./../core/point"],
-  function ( _, DeltaTimer, input_functions, UpdateStore, Renderer, GameState, math, Point) {
+define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core/math-functions", "./../core/vector-functions", "./update-store", "./../core/point"],
+  function ( _, DeltaTimer, input_functions, math, vectors, UpdateStore, Point) {
 
     'use strict';
+
 
     var defaults = {
       net_offset : 100,
@@ -13,11 +14,12 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-
       physics_delta: 15 / 1000
     };
     
-    function GameClient(options, io){          
+    function GameClient(options, io, state, renderer){          
       this.data = _.extend(defaults, options);
 
-      this.state = new GameState();
-      this.renderer = new Renderer({}, this);
+      this.state = state; 
+      this.renderer = renderer;
+      this.updateid = 0;
 
       this.updates = new UpdateStore();     
 
@@ -80,7 +82,8 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-
       },
 
       move_autonomous : function(move, delta){    
-        this.me.controller.apply_move( move , delta );        
+        this.me.apply_move( move );  
+        this.me.update(delta);        
       },
 
       move_corrected: function(time, pos, vel){  
@@ -102,7 +105,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-
 
       update_ping: function(t){
         var now = this.state.time(); 
-        this.ping = now - t;        
+        this.ping = now - t;
       },
      
       process_server_updates : function() {
@@ -136,29 +139,12 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-
           var player_previous = previous.s[ playerid ];
           var player = this.state.find_player( playerid );      
 
-          this.process_update( player, player_previous, previous.t, player_target, target.t, this.data.physics_delta, this.time );
+          player.process_update(player_target, target.t, player_previous, previous.t, this.data.physics_delta, this.time);
       
         }      
+
       },
 
-      find_pos : function(past_pos, past_time, target_pos, target_time, time){
-    
-        var range = target_time - past_time;
-        var difference = time - past_time;
-        var time_point = math.toFixed( difference / range, 3);
-       
-        return Point.lerp(past_pos, target_pos, time_point);              
-      },
-
-      process_update: function( player, past, past_time, target, target_time, delta, time){
-        var past_pos = new Point( past.pos.x, past.pos.y );
-        var target_pos = new Point( target.pos.x, target.pos.y );
-
-        var new_pos = this.find_pos( past_pos, past_time, target_pos, target_time, time );  
-        var smoothed = Point.lerp( player.pos, new_pos, delta * 20 );
-
-        player.pos = smoothed;   
-      },
       
       on_disconnect : function(){
 

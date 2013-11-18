@@ -20,8 +20,10 @@ function(Player, Pool, math, vectors, Point) {
 
   GameState.prototype = {
 
+
     start: function(){
       this.start_time = new Date().getTime();
+      console.log(this.start_time);
     },
 
     stop: function(){
@@ -51,7 +53,9 @@ function(Player, Pool, math, vectors, Point) {
 
     remove_player: function(playerid){
       this.players.remove(playerid);    
-    },     
+    },   
+
+   
    
     client_update: function(delta, me){
       /*var players = this.players.as_array();
