@@ -102,9 +102,8 @@ define(
       }, 0);      
     },
 
-    broadcast_state : function(){
+    broadcast_state : function(delta, time){
 
-      var time = this.state.time();
       var players = this.state.players.as_array() ;       
       var state = {};
       var count = players.length;
@@ -113,7 +112,8 @@ define(
         var player = players[i];  
 
         state[player.id] = { 
-          pos: player.pos.toObject()
+          pos: player.pos.toObject(),
+          vel: player.vel.toObject()
         };
       }
       
@@ -121,7 +121,6 @@ define(
         s: state,
         t: time
       };
-
 
       this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
 

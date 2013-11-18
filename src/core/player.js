@@ -81,7 +81,7 @@ function(MoveStore, Point, vectors, math) {
 
     simulate_tick: function( delta ){
 
-      var friction = 0.88;
+      var friction = 0.8;
 
       var new_pos = this.pos.clone();
       var new_vel = this.vel.clone();
@@ -96,7 +96,7 @@ function(MoveStore, Point, vectors, math) {
       
       new_vel.toFixed(); 
 
-      var speed = Math.sqrt(new_vel.x*new_vel.x + new_vel.y*new_vel.y)   ;  
+      var speed = Math.sqrt(new_vel.x*new_vel.x + new_vel.y*new_vel.y)     
 
       if(speed > friction){
         new_vel.x *= friction;
@@ -114,19 +114,30 @@ function(MoveStore, Point, vectors, math) {
       return{pos:new_pos, vel:new_vel, accel:this.accel};     
     },
 
-    process_update : function(target, target_time, past, past_time, delta, time){
+    process_update : function(target, past, delta, time, smooth){
+      
+      var distance = vectors.v_distance(target.pos, this.pos);     
 
-      var difference = target_time - time;
-      var max_difference = target_time - past_time;
-      var time_point = math.toFixed(difference/max_difference, 3);
+     // var target_pos = target.pos;
+     // var past_pos = past.pos;    
+     // var ago = math.toFixed(target.t - time, 3);
+      var time_point = 0.1;
 
-      var past_pos = new Point(past.pos.x, past.pos.y);
-      var target_pos = new Point(target.pos.x, target.pos.y);
+      if ( distance > 20.0 ){
+         time_point = 0.7;
+      }
+      else if ( distance > 10.0 ){
+         time_point = 0.5;
+      }
+      else if ( distance > 0.1 ){
+        time_point = 0.3;   
+      }
+           
+      var lerped_pos = vectors.v_lerp( past.pos, target.pos, time_point );
+      var actual_pos = vectors.v_lerp( this.pos, lerped_pos, delta * smooth);   
 
-      var pos = Point.lerp(target_pos, past_pos, time_point);  
-      var smoothed = Point.lerp(this.pos, pos, delta*20);
-
-      this.pos = smoothed;             
+      this.pos.set(actual_pos);     
+      
     },
 
     toObject : function() {
