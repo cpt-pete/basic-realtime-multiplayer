@@ -48,7 +48,7 @@ define(
       
         var game = games[i];
        
-        if(game.has_capacity()){
+        if(game.state.players.as_array().length < game.max_players){
           match = game;
           break;
         }
