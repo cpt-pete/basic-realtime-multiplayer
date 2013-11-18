@@ -50,10 +50,9 @@ function(math) {
     return this;
   }; 
 
-  proto.toFixed = function(n){    
-    var places = n || 3;
-    this.x = math.toFixed(this.x, places);
-    this.y = math.toFixed(this.y, places);
+  proto.toFixed = function(){    
+    this.x = math.toFixed(this.x, 3);
+    this.y = math.toFixed(this.y, 3);
     return this;
   };
 
