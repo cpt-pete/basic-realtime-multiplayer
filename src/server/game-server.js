@@ -6,7 +6,7 @@ if (typeof define !== 'function') { var define = require('amdefine')(module); }
 
 define(
   ['./../core/game-state', './../core/vector-functions', './../core/point', './../core/delta-timer'], 
-  function ( GameState, vectors, Point, DeltaTimer) {
+  function ( GameState, vector_utils, Point, DeltaTimer) {
 
   'use strict'; 
 
@@ -16,19 +16,18 @@ define(
     this.id = id;
     this.room_id = "g" + this.id;
     this.io = io;
-    this.last_move_time = {};
   }
 
   GameServer.prototype = {
 
     start: function(){
-      this.update_loop = new DeltaTimer(15, this.update.bind(this));
+      this.physics_loop = new DeltaTimer(15, this.update_physics.bind(this));
       this.broadcast_loop = new DeltaTimer(45, this.broadcast_state.bind(this));
     },
 
     stop: function(){
+      this.physics_loop.stop();
       this.update_loop.stop();
-      this.broadcast_loop.stop();
     },
 
     add_player : function(socket){ 
@@ -48,102 +47,85 @@ define(
       this._broadcast_player_joined(socket, player);
     },  
 
-    get_client_delta: function(player_id, time){
-      return this.last_move_time[player_id] ? (time - this.last_move_time[player_id]) : 0.015;
-    },
+    update_physics : function() {
 
-    server_move: function(socket, player, time, move, accel, pos){
-      var delta = this.get_client_delta(player.id, time);
-      this.last_move_time[player.id] = time;
-
-      var move_result = this.state.calculate_move(player.pos, player.vel, move, 0.015);
-      player.accel = move_result.accel;  
-      
-      this.send_client_ajustment(socket, move_result, time, pos);   
-
-    },
-  
-    update : function() {
-
-      this.state.tick(0.015);
-     /* var players = this.state.players.as_array();
+      var players = this.state.players.as_array();
       var count = players.length;
 
       for (var i = 0; i < count; i++) {        
 
         var player = players[i];
 
-        if(player.moves.any() === false){
+        if(player.input_store.inputs.length === 0){
           continue;
         }
 
-        var new_dir = this.state.direction_vector_for_moves_array( player.moves.all() );
-        var resulting_vector = this.state.movement_vector( new_dir.x_dir, new_dir.y_dir );
-        var pos = vectors.v_add(player.pos, resulting_vector);
+        var new_dir = this.state.calculate_direction_vector(player.input_store.inputs);
+        var resulting_vector = this.state.physics_movement_vector_from_direction(new_dir.x_dir, new_dir.y_dir);
+        var pos = vector_utils.v_add(player.pos, resulting_vector);
 
-        player.pos.fromObject(pos);  
+        player.pos.x = pos.x;
+        player.pos.y = pos.y;
+
+        player.input_store.mark_all_processed();
 
         this.state.constrain_to_world(player);
 
-        player.moves.mark_all_processed();        
-        player.moves.clear();
-      }*/
-    },
-
-    send_client_ajustment : function(socket, move_result, time, pos){
-      if(move_result.pos.equals(pos)){
-        socket.emit("good_move", time );
-      }
-      else{
-      //  console.log(arguments);
-       socket.emit("ajust_move", {
-          t: time,
-          p: move_result.pos.toObject(),
-          v: move_result.vel.toObject()
-        });
+        player.input_store.clear();
       }
     },
 
     broadcast_state : function(delta, time){
 
-      var players = this.state.players
-        .as_array()
-        .filter(
-          function(p){ return (p.updated === true); }
-        );
+      var players = this.state.players.as_array();
 
       var state = {};
       var count = players.length;
 
-      if(count === 0){
-        return;
-      }
-
       for(var i = 0; i < count; i++){
-        var player = players[i];        
-        player.updated = false;
+        var player = players[i];
 
         state[player.id] = { 
           pos: player.pos.toObject(),
-          is: player.moves.processed_seq
+          is: player.input_store.processed_input_seq
         };
       }
-      
+          console.log(time);
       var update = {
         s: state,
         t: time
       };
 
-     // this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
+      this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
 
     },    
 
-    // note: we're reliying on clients update loop to determine speed of server moves
-    // possible for user to send more requests than are possible, resulting in a speed hack
-    // need to add detection to ensure updates aren't too frequent
-    _on_server_move_received : function(socket, move_data){      
-      var player = this.state.find_player(socket.clientid);      
-      this.server_move(socket, player, move_data.t, move_data.m, move_data.a, move_data.p);
+    _on_message : function(client,message) {
+
+          //Cut the message up into sub components
+      var message_parts = message.split('.');
+          //The first is always the type of message
+      var message_type = message_parts[0];
+
+      if(message_type === 'i') {
+              //Input handler will forward this
+        this._on_input(client, message_parts);
+      }
+      else if(message_type === 'p') {
+        client.send('s.p.' + message_parts[1]);
+      }
+
+    },
+
+    _on_input : function(client, parts) {
+      //The input commands come in like u-l,
+      //so we split them up into separate commands,
+      //and then update the players
+      var input_commands = parts[1].split('-');
+      var input_time = parts[2].replace('-','.');
+      var input_seq = parseInt(parts[3], 10);
+
+      this.state.store_input(client.clientid, input_commands, input_time, input_seq);
     },
 
     _on_player_disconnected : function(clientid){
@@ -164,9 +146,9 @@ define(
         this._on_player_disconnected(socket.clientid);
       }.bind(this));
 
-      socket.on("server_move", function(data){
-        this._on_server_move_received(socket, data);
-      }.bind(this));     
+      socket.on("message", function(m){
+        this._on_message(socket, m);
+      }.bind(this));
 
     },
 

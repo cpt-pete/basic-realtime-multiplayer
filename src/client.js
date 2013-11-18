@@ -1,16 +1,5 @@
  /*jshint browser:true */
- /*global define, require, io: true */
-
-require.config({
-  paths: {
-      "underscore": "/lib/underscore"
-  },
-  shim: {
-    underscore: {
-      exports: '_'
-    }   
-  }
-});
+ /*global define, io: true */
 
 define(
   ["./core/game-state", "./client/game-client", "./client/renderer"], 
@@ -20,8 +9,14 @@ define(
 
   var game_state = new GameState();
   var viewport = document.getElementById('viewport');
-  var renderer = new Renderer(game_state, viewport);
+
+  viewport.width = game_state.w;
+  viewport.height = game_state.h;
+
+  var renderer = new Renderer(game_state, viewport.getContext('2d'));
   
-  new GameClient({}, io, game_state, renderer);  
+  new GameClient(io, game_state, renderer);
+
+  
     
 });
