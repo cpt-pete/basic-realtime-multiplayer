@@ -7,32 +7,14 @@ define(["./../core/player", './../core/pool', './../core/math-functions', './../
 
 function(Player, Pool, math, vectors, Point) {
   'use strict';  
-
-  var ENV;
   
-  function GameState(env) {  
-    ENV = env;
+  function GameState() {
     this.h = 500;
     this.w = 400;
     this.players = new Pool();
-
   }
 
   GameState.prototype = {
-
-
-    start: function(){
-      this.start_time = new Date().getTime();
-      console.log(this.start_time);
-    },
-
-    stop: function(){
-
-    },
-
-    time: function(){
-      return new Date().getTime() - this.start_time;
-    },
 
     add_players: function(players_data){
 
@@ -56,24 +38,15 @@ function(Player, Pool, math, vectors, Point) {
     },   
 
    
-   
-    client_update: function(delta, me){
+    update: function(delta){
       var players = this.players.as_array();
       var l = players.length;
 
       for(var i = 0; i < l; i++){
         var player = players[i];
-        if(player.id !== me.id){
-          player.update(delta);
-        }
+        player.update(delta);
       }
-    },
-
-    server_update: function(delta){
-      
-    }
-
-    /*,
+    }/*,
 
     direction_vector_for_moves_array : function( moves_array ) {
        

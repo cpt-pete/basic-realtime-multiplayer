@@ -30,14 +30,13 @@ define(function() {
 
       c.clearRect(0,0,this.state.w, this.state.h);      
 
-      
+      c.fillStyle ="#FF0000";
 
       var players = this.state.players.as_array();
       var count = players.length;
 
       for(var i = 0; i < count; i++){
         var player = players[i];
-        c.fillStyle =player.colour;
         c.fillRect(player.pos.x - 5, player.pos.y - 5, 10, 10);          
       }
       this.updateid = window.requestAnimationFrame( this.update.bind(this), this.view );      

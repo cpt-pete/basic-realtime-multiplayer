@@ -35,35 +35,38 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
                
         this.state.add_players([me]);
         this.state.add_players(others);
+
         this.me = this.state.find_player(me.id);
 
-        this.state.start();
-
+        this.time_loop = new DeltaTimer(1, function(){});
         this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
         
         this.renderer.start();      
       },  
      
       stop: function(){
-        this.state.stop();
+        this.time_loop.stop();
         this.update_loop.stop();
         this.renderer.stop();
       },
      
       update: function(delta, time){
-      
-        this.process_server_updates();
 
-        this.state.client_update( this.data.physics_delta, this.me );  
-
-        var t = this.state.time();
+        var t = math.toFixed(this.time_loop.time, 3);       
         var move = this.sample_inputs();
+
+        this.me.apply_move( move );
+
+        var result = this.me.simulate_tick( this.data.physics_delta );                 
 
         this.me.moves.add(move, t);
 
-        this.move_autonomous( move, this.data.physics_delta );
-
-        this.server_move(t, move, this.me.accel, this.me.pos);                           
+        //if(move.length){          
+          this.server_move(t, move, result.accel, result.pos);                         
+       // }
+       
+        
+        this.state.update( this.data.physics_delta );        
       },
         
       server_move: function(time, move, accel, pos){   
@@ -89,6 +92,19 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
       },
 
       move_corrected: function(time, pos, vel){  
+     /*   var posPoint = new Point(pos.x, pos.y);
+        var distance = posPoint.distance(this.me.pos);
+        var lerp_time = 1;
+
+        if(distance > 50){
+          lerp_time = 0.3;
+        }
+        else if(distance > 10){
+          lerp_time = 0.7;
+        }
+
+        this.me.pos = Point.lerp(this.me.pos, new Point(pos.x, pos.y), lerp_time) ;*/
+
         this.me.pos.set( pos );
         this.me.vel.set( vel );
 
@@ -108,8 +124,9 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
       },
 
       update_ping: function(t){
-        var now = this.state.time(); 
-        this.ping = now - t;
+        var now = math.toFixed(this.time_loop.time, 3);         
+        this.ping = Math.floor((now - t) * 1000);
+        console.log(this.ping);
       },
      
       process_server_updates : function() {
@@ -143,10 +160,13 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
           var player_previous = previous.s[ playerid ];
           var player = this.state.find_player( playerid );
 
-          player.pos.set(player_target.pos);
-          player.vel.set(player_target.vel);
+          player.process_update(player_target, player_previous, this.physics_loop.delta, this.client_time, this.data.client_smooth);
 
-          //player.process_update(player_target, player_previous, this.data.physics_delta, this.client_time, this.data.client_smooth);
+          
+
+
+
+          //player.pos.fromObject(actual_pos);
       
         }      
 
@@ -157,10 +177,14 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
 
       },
      
-     on_serverupdate_recieved : function(data){
-       // this.update_time_from_server(data.t);
+     /* on_serverupdate_recieved : function(data){
+        this.update_time_from_server(data.t);
         this.updates.record(data);   
-      },
+
+        if(data.s[this.me.id]) {
+          this.adjust_position(data.t, data.s[this.me.id].pos);
+        }
+      },*/
 
       on_entered_game : function(data){   
         this.start(data.me, data.others);         
@@ -195,7 +219,7 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./../core
 
         socket.on('player-left', this.on_player_left.bind(this));
 
-        socket.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
+        //socket.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
 
         socket.on('good_move', this.on_good_move.bind(this));
 

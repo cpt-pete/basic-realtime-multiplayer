@@ -33,13 +33,11 @@ define(
   GameServer.prototype = {
 
     start: function(){
-      this.state.start();
       this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
       this.broadcast_loop = new DeltaTimer(this.data.broadcast_rate, this.broadcast_state.bind(this));
     },
 
     stop: function(){
-      this.state.stop();
       this.update_loop.stop();
       this.broadcast_loop.stop();
     },
@@ -51,8 +49,7 @@ define(
         pos:{
           x:Math.random() * this.state.w,
           y:Math.random() * this.state.h
-        },
-        colour: '#' + (0x1000000 + Math.random() * 0xFFFFFF).toString(16).substr(1,6)
+        }
       }]);
 
       var player = this.state.find_player(socket.clientid);
@@ -66,31 +63,87 @@ define(
       this._broadcast_player_joined(socket, player);
     },     
 
-    server_move: function(socket, player, time, move, client_accel, client_pos){     
+    server_move: function(socket, player, time, move, accel, pos){     
       player.apply_move(move);
-      player.update(this.data.physics_delta);
-      this.send_client_ajustment(socket, player.pos, player.vel, time, client_pos);       
+      var move_result = player.simulate_tick(this.data.physics_delta);
+      this.send_client_ajustment(socket, move_result, time, pos);       
     },
   
     update : function() {
-      this.state.server_update(this.data.physics_delta);   
+
+      var players = this.state.players.as_array();
+      var count = players.length;
+
+      for (var i = 0; i < count; i++) {  
+
+        var player = players[i];
+
+        if(this.moves[player.id].length){      
+
+          var icount = this.moves[player.id].length;
+
+          var move_data, move, time, pos, move_result;   
+          var socket = this.sockets[player.id];
+
+          for(var j = 0; j < icount; j++){    
+            
+            move_data = this.moves[player.id][j].move_data;
+            move = move_data.m;      
+            time = move_data.t;   
+            pos = move_data.p;   
+
+            player.apply_move( move );
+            
+           // move_result = player.simulate_tick( this.data.physics_delta );            
+          }
+
+          /*if(icount){
+            this.send_client_ajustment(socket, move_result, time, pos);                 
+          }*/
+        }
+
+        this.moves[player.id] = [];
+      }
+        
+
+      this.state.update(this.data.physics_delta);
+     /* var players = this.state.players.as_array();
+      var count = players.length;
+
+      for (var i = 0; i < count; i++) {        
+
+        var player = players[i];
+
+        if(player.moves.any() === false){
+          continue;
+        }
+
+        var new_dir = this.state.direction_vector_for_moves_array( player.moves.all() );
+        var resulting_vector = this.state.movement_vector( new_dir.x_dir, new_dir.y_dir );
+        var pos = vectors.v_add(player.pos, resulting_vector);
+
+        player.pos.fromObject(pos);  
+
+        this.state.constrain_to_world(player);
+
+        player.moves.mark_all_processed();        
+        player.moves.clear();
+      }*/
     },
 
-    send_client_ajustment : function(socket, server_pos, server_vel, time, client_pos){ 
-    //console.log(arguments);     
-      if(server_pos.equals(client_pos)){
-
+    send_client_ajustment : function(socket, move_result, time, pos){      
+      if(move_result.pos.equals(pos)){
         this.send_client_message( socket, "good_move", time );
       }
       else{
-   //     console.log("ajust", time, server_pos.toObject(),  client_pos);
+        console.log("ajust", time, move_result.pos.toObject(),  pos);
         this.send_client_message(
           socket, 
           "ajust_move", 
           {
             t: time,
-            p: server_pos.toObject(),
-            v: server_vel.toObject()
+            p: move_result.pos.toObject(),
+            v: move_result.vel.toObject()
           }
         );
       }
@@ -104,16 +157,26 @@ define(
 
     broadcast_state : function(delta, time){
 
-      var players = this.state.players.as_array() ;       
+      var players = this.state.players
+        .as_array()
+        .filter(
+          function(p){ return (p.updated === true); }
+        );
+
       var state = {};
       var count = players.length;
-   
+
+      if(count === 0){
+        return;
+      }
+
       for(var i = 0; i < count; i++){
-        var player = players[i];  
+        var player = players[i];        
+        player.updated = false;
 
         state[player.id] = { 
           pos: player.pos.toObject(),
-          vel: player.vel.toObject()
+          is: player.moves.processed_seq
         };
       }
       
@@ -122,7 +185,7 @@ define(
         t: time
       };
 
-      this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
+     // this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
 
     },    
 
@@ -132,7 +195,7 @@ define(
     _on_server_move_received : function(socket, move_data){      
       var player = this.state.find_player(socket.clientid);  
 
-     // this.moves[player.id].push({socket:socket, move_data:move_data});
+      this.moves[player.id].push({socket:socket, move_data:move_data});
 
       this.server_move(socket, player, move_data.t, move_data.m, move_data.a, move_data.p);
     },
