@@ -26,8 +26,8 @@ define(function() {
     return this.moves.length > 0;
   };
 
-  proto.add = function(move, time){    
-    this.moves.push({move:move, time:time});    
+  proto.add = function(moves, time, seq){    
+    this.moves.push({moves:moves, time:time, seq:seq});    
   };
 
  /* proto.get_last_sequence = function(){    
