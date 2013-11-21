@@ -5,7 +5,7 @@
 if (typeof define !== 'function') { var define = require('amdefine')(module); }
 
 define(
-  ['./../core/state', "underscore", './../core/delta-timer', './../core/player', "./../core/world", "./../core/math-functions"], 
+  ['./../core/state', "underscore", './../core/delta-timer', './../core/player', "./../core/world", "./../core/math-functions"],
   function ( State, _,  DeltaTimer, Player, World, math) {
 
   'use strict';
@@ -14,9 +14,9 @@ define(
     physics_rate: 15,
     physics_delta: 15 / 1000,
     broadcast_rate: 100
-  }; 
+  };
 
-  function GameServer(io, id, options){     
+  function GameServer(io, id, options){
 
     this.data = _.extend(defaults, options);
 
@@ -55,10 +55,10 @@ define(
       return new Date().getTime() - this.start_time;
     },
 
-    add_player : function(socket){ 
-           
+    add_player : function(socket){
+
       var player = new Player({
-        id: socket.clientid, 
+        id: socket.clientid,
         pos:{
           x: math.toFixed( Math.random() * this.world.w, 3 ),
           y: math.toFixed( Math.random() * this.world.h, 3)
@@ -69,28 +69,28 @@ define(
       this.state.add ( player );
       this.player_count++;
       //this.state._default.add( Player.default_snapshot( player ) );
-    
-      this.join_room(socket, player);    
-    },     
 
-    server_move: function(socket, player, time, move, client_accel, client_pos){     
-      player.controller.apply_move(move, this.data.physics_delta);          
+      this.join_room(socket, player);
+    },
+
+    server_move: function(socket, player, time, move, client_accel, client_pos){
+      player.controller.apply_move(move, this.data.physics_delta);
 
       this.send_client_ajustment(socket, player.pos, player.vel, time, client_pos);
     },
-  
+
     update : function() {
-     // this.state.server_update(this.data.physics_delta);   
+     // this.state.server_update(this.data.physics_delta);
     },
 
-    send_client_ajustment : function(socket, server_pos, server_vel, time, client_pos){     
+    send_client_ajustment : function(socket, server_pos, server_vel, time, client_pos){
       if(server_pos.equals(client_pos)){
         this.send_client_message( socket, "good_move", time );
       }
       else{
         this.send_client_message(
-          socket, 
-          "ajust_move", 
+          socket,
+          "ajust_move",
           {
             t: time,
             p: server_pos.toObject(),
@@ -100,17 +100,17 @@ define(
       }
     },
 
-    send_client_message : function(socket, message, data){    
+    send_client_message : function(socket, message, data){
       setTimeout(function(){
         socket.emit( message, data );
-      }, 0);      
+      }, 0);
     },
 
     broadcast_state : function(){
 
       // get player state, compare with master - broadcast difference
-      var time = this.time();      
-      
+      var time = this.time();
+
       var update = {
         s: this.state.snapshot(),
         t: time
@@ -118,42 +118,44 @@ define(
 
       this.io.sockets['in'](this.room_id).emit('onserverupdate', update);
 
-    },    
+    },
 
     // note: we're reliying on clients update loop to determine speed of server moves
     // possible for user to send more requests than are possible, resulting in a speed hack
     // need to add detection to ensure updates aren't too frequent
-    _on_server_move_received : function(socket, move_data){      
-      var player = this.state.find(socket.clientid);          
+    _on_server_move_received : function(socket, move_data){
+      var player = this.state.find(socket.clientid);
 
       this.server_move(socket, player, move_data.t, move_data.m, move_data.a, move_data.p);
     },
 
     _on_player_disconnected : function(clientid){
       var player = this.state.find(clientid);
-      this.state.remove(player.id);  
+      this.state.remove(player.id);
       this.player_count--;
 
-      this.io.sockets['in'](this.room_id).emit('event', { name:"player-left", data: player.id } );        
-    },    
-    
-    join_room: function(socket, player){            
+      this.io.sockets['in'](this.room_id).emit('event', { name:"player-left", data: player.id } );
+    },
 
-      socket.on("disconnect", function(){        
+    join_room: function(socket, player){
+
+      socket.on("disconnect", function(){
         this._on_player_disconnected(socket.clientid);
       }.bind(this));
 
       socket.on("server_move", function(data){
         this._on_server_move_received(socket, data);
-      }.bind(this));        
+      }.bind(this));
 
-      socket.join(this.room_id); 
+      socket.join(this.room_id);
 
       var snapshot = player.snapshot();
 
-      socket.emit('event', {name:"joined", data:snapshot});  
-      socket.broadcast.to(this.room_id).emit('event', { name:"player-joined", data: snapshot } ); 
-    }    
+      socket.emit('event', {name:"joined", data:{state:this.state.snapshot(), id:player.id}});
+      socket.broadcast.to(this.room_id).emit('event', { name:"player-joined", data: snapshot } );
+
+      // need to broadcast existing state to person who joined
+    }
 
   };
 
