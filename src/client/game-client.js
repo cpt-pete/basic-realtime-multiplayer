@@ -161,11 +161,13 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-
       },
 
       on_disconnect : function(){
+        this.stop();
+        this.state.clear();
+        this.me = null;
 
       },
 
      on_serverupdate_recieved : function(data){
-
         this.client_time = Math.floor(data.t - this.ping / 2 / 1000);
         this.updates.record(data);
       },
@@ -226,6 +228,8 @@ define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-
         //socket.on('joined', this.on_joined.bind(this));
 
         //socket.on('player-joined', this.on_player_joined.bind(this));
+
+        socket.on('disconnect', this.on_disconnect.bind(this));
 
         socket.on('event', this.on_event.bind(this));
 

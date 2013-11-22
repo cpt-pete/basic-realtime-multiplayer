@@ -2,12 +2,12 @@
 /*global define: true */
 
 define(["underscore"], function(_) {
-  'use strict';  
+  'use strict';
 
   var defaults = {
-    viewport_el:"viewport"      
+    viewport_el:"viewport"
   };
-  
+
   function Renderer(options, game_client, world) {
 
     this.data = _.extend(defaults, options);
@@ -22,8 +22,8 @@ define(["underscore"], function(_) {
 
     view.width = this.world.w;
     view.height = this.world.h;
-   
-    this.context = this.view.getContext("2d");    
+
+    this.context = this.view.getContext("2d");
   }
 
   Renderer.prototype = {
@@ -34,32 +34,31 @@ define(["underscore"], function(_) {
     },
 
     stop: function(){
-      window.cancelAnimationFrame();
-    },    
+      window.cancelAnimationFrame(this.updateid);
+    },
 
     update: function(){
       var c = this.context;
 
-      c.clearRect(0,0,this.world.w, this.world.h);      
+      c.clearRect(0,0,this.world.w, this.world.h);
 
       var actors = this.state.as_array();
       var count = actors.length;
 
       for(var i = 0; i < count; i++){
         var actor = actors[i];
-        actor.render(c);        
+        actor.render(c);
       }
 
       c.font = "12px Arial";
       c.fillText( this.game_client.ping, this.world.w - 30 , 10 );
 
-      this.updateid = window.requestAnimationFrame( this.update.bind(this), this.view );      
+      this.updateid = window.requestAnimationFrame( this.update.bind(this), this.view );
     }
   };
 
   return Renderer;
- 
+
 });
 
 
- 
