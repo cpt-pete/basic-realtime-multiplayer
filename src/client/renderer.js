@@ -51,7 +51,7 @@ define(["underscore"], function(_) {
       }
 
       c.font = "12px Arial";
-      c.fillText( this.game_client.ping, this.world.w - 30 , 10 );
+      c.fillText( 'ping : ' +  this.game_client.ping, this.world.w - 70 , 10 );
 
       this.updateid = window.requestAnimationFrame( this.update.bind(this), this.view );
     }
