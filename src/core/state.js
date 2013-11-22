@@ -4,9 +4,9 @@
 if (typeof define !== 'function') {  var define = require('amdefine')(module); }
 
 define(["underscore"], function(_) {
-  'use strict';  
+  'use strict';
 
-  function State(){   
+  function State(){
     this.indexes = {};
     this.actors = [];
   }
@@ -18,32 +18,36 @@ define(["underscore"], function(_) {
       this.indexes[actor.id] = this.actors.length - 1;
     },
 
-    remove : function(id){       
-      var index = this.get_index(id);   
+    remove : function(id){
+      var index = this.get_index(id);
       this.actors.splice( index , 1);
 
-      delete this.indexes[id];
-
-      for(var key in this.indexes){
-        this.indexes[key] -= 1;
+      this.indexes = {};
+      for(var i = 0; i < this.actors.length; i++){
+        this.indexes[this.actors[i].id] = i;
       }
     },
-    
+
+    clear: function(){
+      this.indexes = {};
+      this.actors = [];
+    },
+
     get_index: function(id){
       return this.indexes[id];
     },
 
     find : function(id){
-      
-      return this.actors[ this.indexes[id] ];    
-    },    
+      var player = this.actors[ this.indexes[id] ];
+      return player || null;
+    },
 
     as_array : function(){
       return this.actors;
     },
 
     snapshot : function(){
-      
+
       var count = this.actors.length;
       var snapshot = {};
 
@@ -57,8 +61,7 @@ define(["underscore"], function(_) {
   };
 
   return State;
- 
+
 });
 
 
- 
