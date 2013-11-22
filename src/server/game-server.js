@@ -26,6 +26,11 @@ define(
     this.room_id = "g" + this.id;
     this.io = io;
 
+    io.set('transports', ['websocket']);
+    io.set('heartbeats', true);
+    io.set('heartbeat timeout', 20);
+    io.set('heartbeat interval', 10);
+
   }
 
   GameServer.prototype = {
@@ -126,19 +131,26 @@ define(
     _on_server_move_received : function(socket, move_data){
       var player = this.state.find(socket.clientid);
 
+      // possible to receive this event after the player has disconnected
+      if(player === null){
+        return;
+      }
+
       this.server_move(socket, player, move_data.t, move_data.m, move_data.a, move_data.p);
     },
 
     _on_player_disconnected : function(clientid){
+      console.log('disconnect', clientid);
       var player = this.state.find(clientid);
       this.state.remove(player.id);
       this.player_count--;
+      console.log('disconnected', player.id, this.player_count);
 
       this.io.sockets['in'](this.room_id).emit('event', { name:"player-left", data: player.id } );
     },
 
     join_room: function(socket, player){
-
+      console.log('joined', player.id);
       socket.on("disconnect", function(){
         this._on_player_disconnected(socket.clientid);
       }.bind(this));
