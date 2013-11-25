@@ -62,7 +62,7 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
       server_move: function(time, move, accel, pos){
         this.send_server_message(
           this.socket,
-          "server_move", {
+          "move", {
             t:time,
             m:move,
             p:pos.toObject(),

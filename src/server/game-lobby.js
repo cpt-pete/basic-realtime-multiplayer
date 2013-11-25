@@ -12,34 +12,36 @@ define(
 
   'use strict'; 
   
-  function GameLobby(io){   
-    this.io = io;
+  function GameLobby(transport){   
+    this.transport = transport;
     this.games = new Pool(); 
     this.total_games = 0;
+
+    transport.on('connection', this.find_game.bind(this));
   }  
 
   GameLobby.prototype = {
 
-    find_game: function(socket){
-      var game = this.find_server_with_capacity();
+    find_game: function(client_id){
+      var game = this._find_server_with_capacity();
       
       if(game === null){
-        game = this.create_game();        
+        game = this._create_game();        
         this.games.add(game, game.id);
         game.start();
       }
 
-      game.add_player(socket);        
+      game.add_player(client_id);        
     },
 
-    create_game : function(){
+    _create_game : function(){
       this.total_games++;
       var id = this.total_games;
-      var game = new GameServer(this.io, id);   
+      var game = new GameServer(this.transport, id);   
       return game;
     },
 
-    find_server_with_capacity : function(){
+    _find_server_with_capacity : function(){
       var i, gameId, games = this.games.as_array();
       var match = null;
       var count = games.length;
