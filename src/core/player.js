@@ -4,7 +4,7 @@
 if (typeof define !== 'function') {  var define = require('amdefine')(module); }
 
 define(
-["./move-store", "./point", "./player-controller"],
+["./move-store", "./utils/point", "./player-controller"],
 function( MoveStore, Point, PlayerController ) {
   'use strict';  
 

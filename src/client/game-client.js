@@ -1,7 +1,7 @@
 /*jshint browser:true */
 /*global define:true */
 
-define(["underscore","./../core/delta-timer", "./mixins/input-funcs", "./update-store", "./renderer", "./../core/state", "./../core/math-functions", "./../core/point", "./../core/player", "./../core/world"],
+define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./update-store", "./renderer", "./../core/state", "./../core/utils/math-functions", "./../core/utils/point", "./../core/player", "./../core/world"],
   function ( _, DeltaTimer, input_functions, UpdateStore, Renderer, State, math, Point, Player, World) {
 
     'use strict';

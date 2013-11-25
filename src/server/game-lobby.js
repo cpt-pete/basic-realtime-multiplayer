@@ -7,7 +7,7 @@ if (typeof define !== 'function') {
 }
 
 define(
-  [ './../core/pool', './../server/game-server'], 
+  [ './../core/utils/pool', './../server/game-server'], 
   function ( Pool, GameServer) {
 
   'use strict'; 
