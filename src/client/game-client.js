@@ -1,8 +1,8 @@
 /*jshint browser:true */
 /*global define:true */
 
-define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./update-store", "./renderer", "./../core/state", "./../core/utils/math-functions", "./../core/utils/point", "./../core/player", "./../core/world"],
-  function ( _, DeltaTimer, input_functions, UpdateStore, Renderer, State, math, Point, Player, World) {
+define(["underscore","./../core/utils/delta-timer", "./input", "./update-store", "./renderer", "./../core/state", "./../core/utils/math-functions", "./../core/utils/point", "./../core/player", "./../core/world"],
+  function ( _, DeltaTimer, input, UpdateStore, Renderer, State, math, Point, Player, World) {
 
     'use strict';
 
@@ -46,11 +46,15 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
 
       update: function(delta, time){
 
+        // update other players
         this.process_server_updates();
 
         var t = this.time();
-        var move = this.sample_inputs();
 
+        // get move based on inputs
+        var move = input.get_move();
+
+        // save move
         this.me.moves.add(move, t);
         this.move_autonomous( move, this.data.physics_delta );
         this.server_move(t, move, this.me.accel, this.me.pos);
@@ -233,8 +237,6 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
     }
 
   };
-
-  input_functions.call(GameClient.prototype);
 
   return GameClient;
 

@@ -71,7 +71,7 @@ define(
       this.state.add ( player );
       this.player_count++;
 
-      this.join(client_id, player);
+      this._join(client_id, player);
     },
 
     server_move: function(client_id, player, time, move, client_accel, client_pos){
@@ -131,7 +131,7 @@ define(
       this.transport.client_left(this.room_id, client_id);
     },
 
-    join: function(client_id, player){
+    _join: function(client_id, player){
 
       var initial_state = this.state.snapshot();
       this.transport.join_server(this.room_id, client_id, initial_state);
