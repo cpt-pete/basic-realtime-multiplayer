@@ -1,8 +1,8 @@
 /*jshint browser:true */
-/*global define:true */
+/*global define true */
 
-define(["underscore","./../core/utils/delta-timer", "./input", "./update-store", "./renderer", "./../core/state", "./../core/utils/math-functions", "./../core/utils/point", "./../core/player", "./../core/world"],
-  function ( _, DeltaTimer, input, UpdateStore, Renderer, State, math, Point, Player, World) {
+define(["underscore","./../core/utils/delta-timer", "./input", "./update-store", "./renderer", "./../core/state", "./../core/utils/math-functions", "./../core/utils/point", "./../core/player", "./../core/world", "./transport-client"],
+  function ( _, DeltaTimer, input, UpdateStore, Renderer, State, math, Point, Player, World, Transport) {
 
     'use strict';
 
@@ -11,7 +11,7 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
       physics_delta: 15 / 1000
     };
 
-    function GameClient(options, io){
+    function GameClient(options){
       this.data = _.extend(defaults, options);
 
       this.state = new State();
@@ -24,7 +24,9 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
 
       this.start_time = new Date().getTime();
 
-      this.connect(io);
+      this.transport = new Transport();
+     
+      this.connect();
     }
 
     GameClient.prototype = {
@@ -61,8 +63,7 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
       },
 
       server_move: function(time, move, accel, pos){
-        this.send_server_message(
-          this.socket,
+        this.transport.to_server(        
           'move', 
           {
             t:time,
@@ -71,11 +72,7 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
             a:accel.toObject()
           });
       },
-
-      send_server_message: function(socket, message, data){
-        socket.emit( message , data );
-      },
-
+     
       move_autonomous : function(move, delta){
         this.me.controller.apply_move( move , delta );
       },
@@ -217,23 +214,23 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
         this.move_corrected(correction.t, correction.p, correction.v);
       },
 
-      connect : function (io) {
-
-        var socket = this.socket = io.connect();
-
+      connect : function () {
+    
         //socket.on('joined', this.on_joined.bind(this));
 
         //socket.on('player-joined', this.on_player_joined.bind(this));
 
-        socket.on('disconnect', this.on_disconnect.bind(this));
+        this.transport.connect();
 
-        socket.on('event', this.on_event.bind(this));
+        this.transport.on('disconnect', this.on_disconnect.bind(this));
 
-        socket.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
+        this.transport.on('event', this.on_event.bind(this));
 
-        socket.on('good_move', this.on_good_move.bind(this));
+        this.transport.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
 
-        socket.on('ajust_move', this.on_ajust_move.bind(this));
+        this.transport.on('good_move', this.on_good_move.bind(this));
+
+        this.transport.on('ajust_move', this.on_ajust_move.bind(this));
     }
 
   };

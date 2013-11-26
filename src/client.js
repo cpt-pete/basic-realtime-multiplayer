@@ -1,5 +1,5 @@
  /*jshint browser:true */
- /*global define, require, io: true */
+ /*global define, require: true */
 
 require.config({
   paths: {
@@ -18,6 +18,6 @@ define(
 
   'use strict';
 
-  new GameClient({}, io);  
+  new GameClient({});  
     
 });
