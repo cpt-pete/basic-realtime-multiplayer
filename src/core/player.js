@@ -38,7 +38,7 @@ function( MoveStore, Point, PlayerController ) {
   Player.from_snapshot = function(snapshot){
     return new Player({
       id: snapshot.id,
-      pos: {x: snapshot.pos_x, y:snapshot.pos_y},
+      pos: {x: snapshot.pos.x, y:snapshot.pos.y},
       colour: snapshot.colour
     });
   };
@@ -46,8 +46,7 @@ function( MoveStore, Point, PlayerController ) {
   Player.snapshot = function(player){
     return{
       id: player.id,
-      pos_x: player.pos.x,
-      pos_y: player.pos.y,
+      pos: player.pos.toObject(),
       colour: player.colour
     };
   };

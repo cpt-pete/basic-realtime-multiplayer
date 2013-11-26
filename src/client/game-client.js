@@ -20,7 +20,6 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
 
       this.updates = new UpdateStore();
 
-      this.server_time = 0;
       this.client_time = 0;
 
       this.start_time = new Date().getTime();
@@ -49,8 +48,6 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
 
         this.process_server_updates();
 
-        //this.state.client_update( this.data.physics_delta, this.me );
-
         var t = this.time();
         var move = this.sample_inputs();
 
@@ -62,7 +59,8 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
       server_move: function(time, move, accel, pos){
         this.send_server_message(
           this.socket,
-          "move", {
+          'move', 
+          {
             t:time,
             m:move,
             p:pos.toObject(),
@@ -71,9 +69,7 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
       },
 
       send_server_message: function(socket, message, data){
-        setTimeout(function(){
-          socket.emit( message , data );
-        }, 0);
+        socket.emit( message , data );
       },
 
       move_autonomous : function(move, delta){
@@ -135,9 +131,6 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
           if(player){
             this.process_update( player, player_previous, previous.t, player_target, target.t, this.data.physics_delta, this.client_time );
           }
-
-
-
         }
       },
 
@@ -151,8 +144,8 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
       },
 
       process_update: function( player, past, past_time, target, target_time, delta, time){
-        var past_pos = new Point( past.pos_x, past.pos_y );
-        var target_pos = new Point( target.pos_x, target.pos_y );
+        var past_pos = new Point( past.pos.x, past.pos.y );
+        var target_pos = new Point( target.pos.x, target.pos.y );
 
         var new_pos = this.find_pos( past_pos, past_time, target_pos, target_time, time );
         var smoothed = Point.lerp( player.pos, new_pos, delta * 20 );
@@ -164,7 +157,6 @@ define(["underscore","./../core/utils/delta-timer", "./mixins/input-funcs", "./u
         this.stop();
         this.state.clear();
         this.me = null;
-
       },
 
      on_serverupdate_recieved : function(data){

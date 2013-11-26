@@ -16,25 +16,25 @@ function(Point) {
 
      constrain_to_world : function( pos, vel ) {
 
-            //Left wall.
+        //Left wall.
         if(pos.x < 0) {
             pos.x = 0;
             vel.x = 0;
         }
 
-            //Right wall
+        //Right wall
         if(pos.x > 400 ) {
             pos.x = 400;
             vel.x = 0;
         }
         
-            //Roof wall.
+        //Roof wall.
         if(pos.y < 0) {
             pos.y = 0;
             vel.y = 0;
         }
 
-            //Floor wall
+        //Floor wall
         if(pos.y > 500 ) {
             pos.y = 500;
             vel.y = 0;

@@ -26,14 +26,8 @@ define(
     this.room_id = "g" + this.id;
     this.transport = transport;
 
-    this.transport.on("disconnect", function(client_id){
-      this._on_player_disconnected(client_id);
-    }.bind(this));
-
-    this.transport.on("move", function(data){
-      this._on_server_move_received(data.client_id, data.data);
-    }.bind(this));
-
+    this.transport.on("disconnect", this._on_player_disconnected.bind(this));
+    this.transport.on("move", this._on_server_move_received.bind(this));
   }
 
   GameServer.prototype = {
@@ -63,10 +57,10 @@ define(
       return new Date().getTime() - this.start_time;
     },
 
-    add_player : function(clientId){
+    add_player : function(client_id){
 
       var player = new Player({
-        id: clientId,
+        id: client_id,
         pos:{
           x: math.toFixed( Math.random() * this.world.w, 3 ),
           y: math.toFixed( Math.random() * this.world.h, 3 )
@@ -77,7 +71,7 @@ define(
       this.state.add ( player );
       this.player_count++;
 
-      this.join(clientId, player);
+      this.join(client_id, player);
     },
 
     server_move: function(client_id, player, time, move, client_accel, client_pos){
@@ -115,15 +109,17 @@ define(
     // note: we're reliying on clients update loop to determine speed of server moves
     // possible for user to send more requests than are possible, resulting in a speed hack
     // need to add detection to ensure updates aren't too frequent
-    _on_server_move_received : function(client_id, move_data){
+    _on_server_move_received : function(data){
+      var client_id = data.client_id;
       var player = this.state.find(client_id);
+      var move = data.data;
 
       // possible to receive this event after the player has disconnected
       if(player === null){
         return;
       }
 
-      this.server_move(client_id, player, move_data.t, move_data.m, move_data.a, move_data.p);
+      this.server_move(client_id, player, move.t, move.m, move.a, move.p);
     },
 
     _on_player_disconnected : function(client_id){
