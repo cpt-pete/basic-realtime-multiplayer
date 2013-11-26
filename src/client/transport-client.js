@@ -1,6 +1,6 @@
-/*jshint node:true */
+/*jshint browser:true */
 /*jshint -W079 */
-/*global define, EventEmitter, io: true */
+/*global define, EventEmitter, io */
 
 define( function () {
 

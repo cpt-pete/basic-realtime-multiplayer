@@ -1,5 +1,5 @@
 /*jshint browser:true */
-/*global define true */
+/*global define */
 
 define(["underscore","./../core/utils/delta-timer", "./input", "./update-store", "./renderer", "./../core/state", "./../core/utils/math-functions", "./../core/utils/point", "./../core/player", "./../core/world", "./transport-client"],
   function ( _, DeltaTimer, input, UpdateStore, Renderer, State, math, Point, Player, World, Transport) {
@@ -23,9 +23,7 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
       this.client_time = 0;
 
       this.start_time = new Date().getTime();
-
-      this.transport = new Transport();
-     
+          
       this.connect();
     }
 
@@ -160,7 +158,7 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
         this.me = null;
       },
 
-     on_serverupdate_recieved : function(data){
+      on_serverupdate_recieved : function(data){
         this.client_time = Math.floor(data.t - this.ping / 2 / 1000);
         this.updates.record(data);
       },
@@ -169,7 +167,6 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
 
         var state_snapshot = data.state;
         var player_id = parseInt(data.id, 10);
-        console.log("on_joned", data);
 
         for(var id in state_snapshot){
           var player = Player.from_snapshot(state_snapshot[id]);
@@ -185,7 +182,6 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
 
       on_player_joined : function(snapshot){
         var player = Player.from_snapshot(snapshot);
-        console.log("on_player_joined", player);
         this.state.add(player);
       },
 
@@ -216,20 +212,13 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
 
       connect : function () {
     
-        //socket.on('joined', this.on_joined.bind(this));
-
-        //socket.on('player-joined', this.on_player_joined.bind(this));
-
+        this.transport = new Transport();
         this.transport.connect();
 
         this.transport.on('disconnect', this.on_disconnect.bind(this));
-
         this.transport.on('event', this.on_event.bind(this));
-
         this.transport.on('onserverupdate', this.on_serverupdate_recieved.bind(this));
-
         this.transport.on('good_move', this.on_good_move.bind(this));
-
         this.transport.on('ajust_move', this.on_ajust_move.bind(this));
     }
 
