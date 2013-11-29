@@ -31,7 +31,6 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
 
       start: function(me){
         this.update_loop = new DeltaTimer(this.data.physics_rate, this.update.bind(this));
-
         this.renderer.start();
       },
 
@@ -40,23 +39,33 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
         this.renderer.stop();
       },
 
-     time: function(){
+      // to keep 'time' small, time is miliseconds since game start (less data to transmit)
+      time: function(){
         return new Date().getTime() - this.start_time;
       },
 
-      update: function(delta, time){
+      // this function is called roughly every 15 ms
+      update: function(){
 
         // update other players
         this.process_server_updates();
 
+        // get current client time
         var t = this.time();
 
         // get move based on inputs
+        // this will be an array of direction to move such as ['l', 'u'] for left and up
         var move = input.get_move();
 
         // save move
         this.me.moves.add(move, t);
+
+        // apply the move locally
+        // we use a fixed delta time because we have physics based movement
+        // physics delta is hardcoded to 0.015 - every 15 ms
         this.move_autonomous( move, this.data.physics_delta );
+
+        // inform the server of our move
         this.server_move(t, move, this.me.accel, this.me.pos);
       },
 
@@ -76,10 +85,12 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
       },
 
       move_corrected: function(time, pos, vel){
+        // update position / velocity to match server values for this move
         this.me.pos.set( pos );
         this.me.vel.set( vel );
         this.me.moves.clear_from_time( time );
 
+        // rerun all moves which were made after this one        
         var moves = this.me.moves.all();
         var l = moves.length;
 
@@ -92,6 +103,7 @@ define(["underscore","./../core/utils/delta-timer", "./input", "./update-store",
         this.me.moves.clear_from_time(time);
       },
 
+      // we can mesure ping by comparing the current time to any times referenced in corrected / confirmed moves
       update_ping: function(t){
         var now = this.time();
         this.ping = now - t;
